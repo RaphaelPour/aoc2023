@@ -6,11 +6,20 @@ import (
 	"strings"
 
 	"github.com/RaphaelPour/stellar/input"
+	stellarStrings "github.com/RaphaelPour/stellar/strings"
 )
 
 var (
-	nm = []string{
-		"one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
+	digits = []string{
+		"one",
+		"two",
+		"three",
+		"four",
+		"five",
+		"six",
+		"seven",
+		"eight",
+		"nine",
 	}
 )
 
@@ -27,18 +36,12 @@ func value(in string) int {
 	} else if len(number) == 1 {
 		number += number
 	}
-	n, _ := strconv.Atoi(number)
-	fmt.Println(n)
-	return n
-}
 
-func reverse(in string) string {
-	result := ""
-	for _, ch := range in {
-		result = string(ch) + result
+	if number == "" {
+		return 0
 	}
 
-	return result
+	return stellarStrings.ToInt(number)
 }
 
 func replace(in string) string {
@@ -46,14 +49,12 @@ func replace(in string) string {
 	out := ""
 	for _, ch := range in {
 		buffer += string(ch)
-		fmt.Printf("[buffer] %s\n", buffer)
 
 		line := buffer
-		for i, n := range nm {
-			line = strings.ReplaceAll(line, n, strconv.Itoa(i+1))
+		for i, digit := range digits {
+			line = strings.ReplaceAll(line, digit, strconv.Itoa(i+1))
 		}
 		if line != buffer {
-			fmt.Printf("[replace] %s -> %s\n", buffer, line)
 			out += line
 			buffer = ""
 		}
@@ -65,16 +66,14 @@ func replace(in string) string {
 func replaceReverse(in string) string {
 	buffer := ""
 	out := ""
-	for _, ch := range reverse(in) {
+	for _, ch := range stellarStrings.Reverse(in) {
 		buffer = string(ch) + buffer
-		fmt.Printf("[buffer] %s\n", buffer)
 
 		line := buffer
-		for i, n := range nm {
-			line = strings.ReplaceAll(line, n, strconv.Itoa(i+1))
+		for i, digit := range digits {
+			line = strings.ReplaceAll(line, digit, strconv.Itoa(i+1))
 		}
 		if line != buffer {
-			fmt.Printf("[replace] %s -> %s\n", buffer, line)
 			out = line + out
 			buffer = ""
 		}
@@ -84,6 +83,7 @@ func replaceReverse(in string) string {
 }
 
 func part1(in []string) int {
+
 	result := 0
 	for _, line := range in {
 		result += value(line)
@@ -95,10 +95,7 @@ func part2(in []string) int {
 	result := 0
 
 	for _, line := range in {
-		orig := line
-		line = replace(line) + replaceReverse(line)
-		fmt.Printf("%s -> %s\n", orig, line)
-		result += value(line)
+		result += value(replace(line) + replaceReverse(line))
 	}
 	return result
 }
@@ -107,8 +104,6 @@ func main() {
 
 	data := input.LoadString("input")
 
-	fmt.Println(part1(data))
-
-	fmt.Println("bad: 54607, 54596")
-	fmt.Println(part2(data))
+	fmt.Printf("part 1: %d\n", part1(data))
+	fmt.Printf("part 2: %d\n", part2(data))
 }
