@@ -28,6 +28,29 @@ func (r Result) Add(other Result) Result {
 	return r
 }
 
+func (r Result) Max(other Result) Result {
+	max := Result{}
+	if r.red > other.red {
+		max.red = r.red
+	} else {
+		max.red = other.red
+	}
+
+	if r.green > other.green {
+		max.green = r.green
+	} else {
+		max.green = other.green
+	}
+
+	if r.blue > other.blue {
+		max.blue = r.blue
+	} else {
+		max.blue = other.blue
+	}
+
+	return max
+}
+
 func (r Result) String() string {
 	out := make([]string, 0)
 	if r.red > 0 {
@@ -87,6 +110,14 @@ func (g Game) IsPossible() bool {
 	//return megaResult.IsPossible()
 }
 
+func (g Game) Power() int {
+	max := Result{}
+	for _, result := range g.results {
+		max = max.Max(result)
+	}
+	return max.red * max.blue * max.green
+}
+
 func (g Game) String() string {
 	out := fmt.Sprintf("Game %d: ", g.id)
 	for _, result := range g.results {
@@ -122,7 +153,6 @@ func part1(in []string) int {
 	result := 0
 	for _, line := range in {
 		g, err := NewGame(line)
-		fmt.Printf("%s\n%s\n\n", line, g)
 		if err != nil {
 			return 0
 		}
@@ -135,8 +165,16 @@ func part1(in []string) int {
 	return result
 }
 
-func part2(_ []string) int {
-	return 0
+func part2(in []string) int {
+	result := 0
+	for _, line := range in {
+		g, err := NewGame(line)
+		if err != nil {
+			return 0
+		}
+		result += g.Power()
+	}
+	return result
 }
 
 func main() {
@@ -145,5 +183,5 @@ func main() {
 
 	fmt.Println("bad: 193,1307, 2996")
 	fmt.Printf("part 1: %d\n", part1(data))
-	// fmt.Printf("part 2: %d\n", part2(data))
+	fmt.Printf("part 2: %d\n", part2(data))
 }
