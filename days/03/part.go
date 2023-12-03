@@ -68,10 +68,6 @@ func (p Point) Add(other Point) Point {
 	return p
 }
 
-func (p Point) Dist(other Point) int {
-	return math.Abs(p.x-other.x) + math.Abs(p.y-other.y)
-}
-
 type Grid struct {
 	data       map[Point]Cell
 	maxX, maxY int
@@ -114,7 +110,6 @@ func (g *Grid) Set(x, y int, cell Cell) {
 
 func (g Grid) HasConnections(p, origin Point, depth int) (Point, bool) {
 	if g.Get(p).kind == CELL_KIND_SYMBOL {
-		// fmt.Printf("%s %s SYMB\n", strings.Repeat(" ", depth), p)
 		return p, true
 	}
 
@@ -127,33 +122,22 @@ func (g Grid) HasConnections(p, origin Point, depth int) (Point, bool) {
 			cell := g.Get(p.Add(Point{x, y}))
 
 			if cell.coord == origin {
-				// don't go back where we came from
 				continue
 			}
 
 			if cell.kind == CELL_KIND_SYMBOL {
-				// fmt.Printf("%s %s Neighbor SYMB\n", strings.Repeat(" ", depth), p)
 				return cell.coord, true
 			}
 
-			// only allow positive number nieghbor lookup so numbers
-			// don't acknoledge each other
-			/*if x < 0 || y < 0 {
-				continue
-			}*/
-
 			if cell.kind == CELL_KIND_NUMBER {
-				// fmt.Printf("%s %s check number neighbor\n", strings.Repeat(" ", depth), p)
 				symbolCoord, con := g.HasConnections(cell.coord, p, depth+1)
 				if con {
-					// fmt.Printf("%s %s deep neighbor SYMB\n", strings.Repeat(" ", depth), p)
 					return symbolCoord, con
 				}
 			}
 		}
 	}
 
-	//  fmt.Printf("%s %s nope\n", strings.Repeat(" ", depth), p)
 	return Point{}, false
 }
 
@@ -166,11 +150,9 @@ func (g Grid) FindMissing() (int, int) {
 			if !ok || cell.kind != CELL_KIND_NUMBER {
 				continue
 			}
-			// fmt.Println(cell.buffer)
 			if symbolCoord, ok := g.HasConnections(Point{x, y}, Point{x, y}, 0); ok {
 				cell.symbolCoord = symbolCoord
 				cells = append(cells, cell)
-				fmt.Print(">", cell.buffer, " ", symbolCoord, "<\n")
 			}
 		}
 	}
@@ -180,11 +162,9 @@ func (g Grid) FindMissing() (int, int) {
 	sum := 0
 	buffer := cells[0].buffer
 	for i, cell := range cells[1:] {
-		// fmt.Printf("x=%d y=%d %s\n", cell.coord.x, cell.coord.y, cell.symbolCoord)
 		if cell.coord.y != cells[i].coord.y ||
 			math.Abs(cell.coord.x-cells[i].coord.x) > 1 {
 			num := stellar_strings.ToInt(buffer)
-			fmt.Println(num)
 			sum += num
 			buffer = ""
 
@@ -193,7 +173,6 @@ func (g Grid) FindMissing() (int, int) {
 			}
 
 			symbCell, ok := g.data[cells[i].symbolCoord]
-			fmt.Println(num, symbCell.buffer, cells[i].symbolCoord)
 			if ok && symbCell.buffer == "*" {
 				symbolCache[cells[i].symbolCoord] = append(symbolCache[cells[i].symbolCoord], num)
 			}
@@ -202,7 +181,6 @@ func (g Grid) FindMissing() (int, int) {
 		buffer += cell.buffer
 	}
 	num := stellar_strings.ToInt(buffer)
-	fmt.Println(num)
 	sum += num
 
 	if _, ok := symbolCache[cells[len(cells)-1].symbolCoord]; !ok {
@@ -211,7 +189,6 @@ func (g Grid) FindMissing() (int, int) {
 	symbolCache[cells[len(cells)-1].symbolCoord] = append(symbolCache[cells[len(cells)-1].symbolCoord], num)
 
 	sum2 := 0
-	fmt.Println(symbolCache)
 	for _, numbers := range symbolCache {
 		if len(numbers) != 2 {
 			continue
@@ -235,19 +212,11 @@ func part1(data []string) (int, int) {
 		}
 	}
 
-	fmt.Println(grid)
-
 	return grid.FindMissing()
-}
-
-func part2(data []string) int {
-	return 0
 }
 
 func main() {
 	data := input.LoadString("input")
-	// data := input.LoadDefaultInt()
-	// data := input.LoadInt("input")
 
 	fmt.Println("== [ PART 1 ] ==")
 	p1, p2 := part1(data)
