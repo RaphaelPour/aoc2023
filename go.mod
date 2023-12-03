@@ -2,8 +2,6 @@ module github.com/RaphaelPour/aoc2023
 
 go 1.21
 
-toolchain go1.21.1
-
 require github.com/RaphaelPour/stellar v0.0.0-20221215052053-c272527ed746
 
 require (
