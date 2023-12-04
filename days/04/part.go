@@ -92,28 +92,19 @@ func part2(data []string) int {
 		}
 
 		_, count := card.Points()
-		newCards := make([]int, 0)
+		newCards := make([]int, count)
 		for i := 1; i <= count; i++ {
-			newCards = append(newCards, card.id+i)
+			newCards[i-1] = card.id + i
 		}
 
 		cache[card.id] = newCards
 		queue = append(queue, newCards...)
-		// fmt.Printf("%d: %d %v\n", card.id, count, newCards)
 	}
 
-	fmt.Println("---")
 	for i := 0; i < len(queue); i++ {
-		//fmt.Println(queue)
-		if i%100000 == 0 {
-			fmt.Printf("%d/%d\n", i, len(queue))
+		if subCards, ok := cache[queue[i]]; ok {
+			queue = append(queue, subCards...)
 		}
-		subCards, ok := cache[queue[i]]
-		if !ok {
-			continue
-		}
-		// fmt.Printf("%d: %d %v\n", queue[i], len(subCards), subCards)
-		queue = append(queue, subCards...)
 	}
 
 	return len(queue) + len(data)
