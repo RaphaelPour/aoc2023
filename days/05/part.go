@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
+	"sync"
 
 	"github.com/RaphaelPour/stellar/input"
 	stellarStrings "github.com/RaphaelPour/stellar/strings"
@@ -130,19 +132,22 @@ func (m M) Find(seed int, fromKey, goalKey string, depth int) (int, error) {
 	}
 
 	key := m.FindKey(fromKey)
+
 	if key == EmptyKey {
 		return -1, fmt.Errorf("error finding key for from key %s", fromKey)
 	}
 
-	if value, ok := m.cache[CacheKey{key: key, seed: seed}]; ok {
-		return value, nil
-	}
+	/*
+		if value, ok := m.cache[CacheKey{key: key, seed: seed}]; ok {
+			return value, nil
+		}
+	*/
 
 	min, err := m.Find(m.data[key].project(seed), key.to, goalKey, depth+1)
 	if err != nil {
 		return -1, err
 	}
-	m.cache[CacheKey{key: key, seed: seed}] = min
+	//m.cache[CacheKey{key: key, seed: seed}] = min
 	return min, nil
 }
 
@@ -173,16 +178,69 @@ func part1(data []string) int {
 	return min
 }
 
+func work(start, length int, maps M) int {
+	min := -1
+	for j := start; j <= start+length; j += 1 {
+		val, err := maps.Find(j, "seed", "location", 0)
+		if err != nil {
+			fmt.Println(err)
+			return -1
+		}
+		if val < min || min == -1 {
+			min = val
+		}
+	}
+	return min
+}
+
 func part2(data []string) int {
-	return 0
+	seedRanges := make([]int, 0)
+	for _, rawNum := range strings.Split(data[0], " ")[1:] {
+		seedRanges = append(seedRanges, stellarStrings.ToInt(rawNum))
+	}
+
+	maps, err := NewMap(data[2:])
+	if err != nil {
+		fmt.Println(err)
+		return -1
+	}
+
+	total := 0
+	for i := 0; i < len(seedRanges)/2; i++ {
+		total += seedRanges[i*2+1]
+	}
+
+	var wg sync.WaitGroup
+	var m sync.Mutex
+	min := -1
+	for i := 0; i < len(seedRanges); i += 2 {
+		wg.Add(1)
+		go func(start, length int) {
+			defer wg.Done()
+			fmt.Print(">")
+			val := work(start, length, maps)
+
+			m.Lock()
+			defer m.Unlock()
+			if val < min || min == -1 {
+				min = val
+			}
+			fmt.Print("<")
+		}(seedRanges[i], seedRanges[i+1])
+	}
+
+	wg.Wait()
+	return min
 }
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println("too high: 10834441")
+	fmt.Println(part2(data))
 }
