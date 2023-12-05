@@ -13,13 +13,25 @@ var (
 	pattern  = regexp.MustCompile(`^(\w+)-to-(\w+) map:$`)
 	EmptyKey = Key{}
 	EmptyMap = M{}
-	Cache    = map[CacheKey]int{}
 )
 
 type Range struct {
 	destinationStart int
 	sourceStart      int
-	_range           int
+	length           int
+}
+
+func (r Range) project(in int) int {
+	// return input iteself it is out-of-range
+	if in < r.sourceStart || in > r.sourceStart+r.length {
+		return in
+	}
+
+	// map input onto [0,length]
+	offset := in - r.sourceStart
+
+	// apply offset onto destination
+	return r.destinationStart + offset
 }
 
 type CacheKey struct {
@@ -32,76 +44,14 @@ type Key struct {
 }
 
 type M struct {
-	data map[Key][]Range
-}
-
-func (m M) FindKey(from string) Key {
-	for k := range m.data {
-		if k.from == from {
-			return k
-		}
-	}
-	return EmptyKey
-}
-
-func (m M) Find(seed int, fromKey string) (int, error) {
-	key := m.FindKey(fromKey)
-	if key == EmptyKey {
-		return -1, fmt.Errorf("error finding key for from key %s", fromKey)
-	}
-	// fmt.Println(key, seed)
-
-	if value, ok := Cache[CacheKey{key: key, seed: seed}]; ok {
-		fmt.Println("HIT")
-		return value, nil
-	}
-
-	min := -1
-	var err error
-	for _, r := range m.data[key] {
-		// fmt.Println(seed, r)
-		if seed < r.sourceStart || seed > r.sourceStart+r._range {
-			value := 10000000000
-			if key.to != "location" {
-				value, err = m.Find(seed, key.to)
-				if err != nil {
-					return -1, err
-				}
-			}
-			if value < min || min == -1 {
-				min = value
-			}
-			continue
-		}
-
-		for i := 0; i < r._range; i++ {
-			value := 1000000000000
-			source := seed - r.sourceStart
-			destination := r.destinationStart + source + i
-			// fmt.Println(seed, r, source, destination)
-
-			value = seed
-			if key.to != "location" {
-				value, err = m.Find(destination, key.to)
-				if err != nil {
-					return -1, err
-				}
-			}
-			if value < min || min == -1 {
-				min = value
-			}
-
-		}
-	}
-
-	Cache[CacheKey{key: key, seed: seed}] = min
-	fmt.Println(key, seed)
-	return min, nil
+	data  map[Key][]Range
+	cache map[CacheKey]int
 }
 
 func NewMap(data []string) (M, error) {
 	maps := M{
-		data: make(map[Key][]Range),
+		data:  make(map[Key][]Range),
+		cache: make(map[CacheKey]int),
 	}
 	currentKey := EmptyKey
 	for _, line := range data {
@@ -133,12 +83,62 @@ func NewMap(data []string) (M, error) {
 		r := Range{
 			destinationStart: stellarStrings.ToInt(rawNumbers[0]),
 			sourceStart:      stellarStrings.ToInt(rawNumbers[1]),
-			_range:           stellarStrings.ToInt(rawNumbers[2]),
+			length:           stellarStrings.ToInt(rawNumbers[2]),
 		}
 		maps.data[currentKey] = append(maps.data[currentKey], r)
 	}
 
 	return maps, nil
+}
+
+func (m M) FindKey(from string) Key {
+	for k := range m.data {
+		if k.from == from {
+			return k
+		}
+	}
+	return EmptyKey
+}
+
+func (m M) String() string {
+	out := ""
+	for key, ranges := range m.data {
+		out += fmt.Sprintf("%s-to-%s map:\n", key.from, key.to)
+		for _, r := range ranges {
+			out += fmt.Sprintf("%d %d %d\n", r.destinationStart, r.sourceStart, r.length)
+		}
+		out += "\n"
+	}
+	return out
+}
+
+func (m M) Find(seed int, fromKey, goalKey string) (int, error) {
+	key := m.FindKey(fromKey)
+	if key == EmptyKey {
+		return -1, fmt.Errorf("error finding key for from key %s", fromKey)
+	}
+
+	if value, ok := m.cache[CacheKey{key: key, seed: seed}]; ok {
+		return value, nil
+	}
+
+	min := -1
+	var err error
+	for _, r := range m.data[key] {
+		value := r.project(seed)
+		if key.to != goalKey {
+			value, err = m.Find(value, key.to, goalKey)
+			if err != nil {
+				return -1, err
+			}
+		}
+		if value < min || min == -1 {
+			min = value
+		}
+	}
+
+	m.cache[CacheKey{key: key, seed: seed}] = min
+	return min, nil
 }
 
 func part1(data []string) int {
@@ -155,7 +155,7 @@ func part1(data []string) int {
 
 	min := -1
 	for _, seed := range seeds {
-		val, err := maps.Find(seed, "seed")
+		val, err := maps.Find(seed, "seed", "location")
 		if err != nil {
 			fmt.Println(err)
 			return -1
@@ -163,7 +163,6 @@ func part1(data []string) int {
 		if val < min || min == -1 {
 			min = val
 		}
-		break
 	}
 
 	return min
