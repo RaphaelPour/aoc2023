@@ -113,6 +113,10 @@ func (m M) String() string {
 }
 
 func (m M) Find(seed int, fromKey, goalKey string) (int, error) {
+	if fromKey == goalKey {
+		return seed, nil
+	}
+
 	key := m.FindKey(fromKey)
 	if key == EmptyKey {
 		return -1, fmt.Errorf("error finding key for from key %s", fromKey)
@@ -123,14 +127,10 @@ func (m M) Find(seed int, fromKey, goalKey string) (int, error) {
 	}
 
 	min := -1
-	var err error
 	for _, r := range m.data[key] {
-		value := r.project(seed)
-		if key.to != goalKey {
-			value, err = m.Find(value, key.to, goalKey)
-			if err != nil {
-				return -1, err
-			}
+		value, err := m.Find(r.project(seed), key.to, goalKey)
+		if err != nil {
+			return -1, err
 		}
 		if value < min || min == -1 {
 			min = value
@@ -173,7 +173,7 @@ func part2(data []string) int {
 }
 
 func main() {
-	data := input.LoadString("input1")
+	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))

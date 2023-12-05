@@ -78,6 +78,9 @@ func TestProject(t *testing.T) {
 		length:           37,
 	}
 	require.Equal(t, 60, r.project(56))
+	require.Equal(t, 0, r.project(0))
+	require.Equal(t, 55, r.project(55))
+	require.Equal(t, 64, r.project(60))
 }
 
 func TestPart1Example(t *testing.T) {
