@@ -49,35 +49,45 @@ func (m M) Find(seed int, fromKey string) (int, error) {
 	if key == EmptyKey {
 		return -1, fmt.Errorf("error finding key for from key %s", fromKey)
 	}
+	// fmt.Println(key, seed)
 
 	if value, ok := Cache[CacheKey{key: key, seed: seed}]; ok {
+		fmt.Println("HIT")
 		return value, nil
 	}
 
-	min := 10000000
+	min := -1
 	var err error
 	for _, r := range m.data[key] {
+		// fmt.Println(seed, r)
 		if seed < r.sourceStart || seed > r.sourceStart+r._range {
-			if seed < min {
-				min = seed
+			value := 0
+			if key.to != "location" {
+				value, err = m.Find(seed, key.to)
+				if err != nil {
+					return -1, err
+				}
+			}
+			if value < min || min == -1 {
+				min = value
 			}
 			continue
 		}
 
-		for i := 1; i < r._range; i++ {
+		for i := 0; i < r._range; i++ {
 			value := 0
 			source := seed - r.sourceStart
 			destination := r.destinationStart + source + i
 			// fmt.Println(seed, r, source, destination)
 
-			value = destination
+			value = seed
 			if key.to != "location" {
-				value, err = m.Find(value, key.to)
+				value, err = m.Find(destination, key.to)
 				if err != nil {
 					return -1, err
 				}
 			}
-			if value < min {
+			if value < min || min == -1 {
 				min = value
 			}
 
@@ -85,6 +95,7 @@ func (m M) Find(seed int, fromKey string) (int, error) {
 	}
 
 	Cache[CacheKey{key: key, seed: seed}] = min
+	fmt.Println(key, seed)
 	return min, nil
 }
 
@@ -142,16 +153,17 @@ func part1(data []string) int {
 		return -1
 	}
 
-	min := 100
+	min := -1
 	for _, seed := range seeds {
 		val, err := maps.Find(seed, "seed")
 		if err != nil {
 			fmt.Println(err)
 			return -1
 		}
-		if val < min {
+		if val < min || min == -1 {
 			min = val
 		}
+		break
 	}
 
 	return min
@@ -162,7 +174,7 @@ func part2(data []string) int {
 }
 
 func main() {
-	data := input.LoadString("input")
+	data := input.LoadString("input1")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
