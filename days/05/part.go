@@ -21,17 +21,29 @@ type Range struct {
 	length           int
 }
 
-func (r Range) project(in int) int {
+func (r Range) project(in int) (int, bool) {
 	// return input iteself it is out-of-range
 	if in < r.sourceStart || in > r.sourceStart+r.length {
-		return in
+		return -1, false
 	}
 
 	// map input onto [0,length]
 	offset := in - r.sourceStart
 
 	// apply offset onto destination
-	return r.destinationStart + offset
+	return r.destinationStart + offset, true
+}
+
+type RangeRange []Range
+
+func (rr RangeRange) project(in int) int {
+	for _, r := range rr {
+		if value, ok := r.project(in); ok {
+			return value
+		}
+	}
+
+	return in
 }
 
 type CacheKey struct {
@@ -44,13 +56,13 @@ type Key struct {
 }
 
 type M struct {
-	data  map[Key][]Range
+	data  map[Key]RangeRange
 	cache map[CacheKey]int
 }
 
 func NewMap(data []string) (M, error) {
 	maps := M{
-		data:  make(map[Key][]Range),
+		data:  make(map[Key]RangeRange),
 		cache: make(map[CacheKey]int),
 	}
 	currentKey := EmptyKey
@@ -112,7 +124,7 @@ func (m M) String() string {
 	return out
 }
 
-func (m M) Find(seed int, fromKey, goalKey string) (int, error) {
+func (m M) Find(seed int, fromKey, goalKey string, depth int) (int, error) {
 	if fromKey == goalKey {
 		return seed, nil
 	}
@@ -126,17 +138,10 @@ func (m M) Find(seed int, fromKey, goalKey string) (int, error) {
 		return value, nil
 	}
 
-	min := -1
-	for _, r := range m.data[key] {
-		value, err := m.Find(r.project(seed), key.to, goalKey)
-		if err != nil {
-			return -1, err
-		}
-		if value < min || min == -1 {
-			min = value
-		}
+	min, err := m.Find(m.data[key].project(seed), key.to, goalKey, depth+1)
+	if err != nil {
+		return -1, err
 	}
-
 	m.cache[CacheKey{key: key, seed: seed}] = min
 	return min, nil
 }
@@ -155,7 +160,7 @@ func part1(data []string) int {
 
 	min := -1
 	for _, seed := range seeds {
-		val, err := maps.Find(seed, "seed", "location")
+		val, err := maps.Find(seed, "seed", "location", 0)
 		if err != nil {
 			fmt.Println(err)
 			return -1

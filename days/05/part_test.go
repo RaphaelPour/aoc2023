@@ -35,7 +35,7 @@ func TestFind(t *testing.T) {
 		{seed: 35, expected: 35, from: "humidity", name: "humidity 4"},
 	} {
 		t.Run(testCase.name, func(t *testing.T) {
-			actual, err := m.Find(testCase.seed, testCase.from, "location")
+			actual, err := m.Find(testCase.seed, testCase.from, "location", 0)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expected, actual)
 		})
@@ -44,8 +44,8 @@ func TestFind(t *testing.T) {
 
 func TestExample1(t *testing.T) {
 	m := M{
-		data: map[Key][]Range{
-			Key{from: "seed", to: "soil"}: []Range{
+		data: map[Key]RangeRange{
+			Key{from: "seed", to: "soil"}: RangeRange{
 				Range{50, 98, 2},
 				Range{52, 50, 48},
 			},
@@ -54,19 +54,19 @@ func TestExample1(t *testing.T) {
 	}
 	fmt.Println(m)
 
-	result, err := m.Find(79, "seed", "soil")
+	result, err := m.Find(79, "seed", "soil", 0)
 	require.NoError(t, err)
 	require.Equal(t, 81, result)
 
-	result, err = m.Find(14, "seed", "soil")
+	result, err = m.Find(14, "seed", "soil", 0)
 	require.NoError(t, err)
 	require.Equal(t, 14, result)
 
-	result, err = m.Find(55, "seed", "soil")
+	result, err = m.Find(55, "seed", "soil", 0)
 	require.NoError(t, err)
 	require.Equal(t, 57, result)
 
-	result, err = m.Find(13, "seed", "soil")
+	result, err = m.Find(13, "seed", "soil", 0)
 	require.NoError(t, err)
 	require.Equal(t, 13, result)
 }
