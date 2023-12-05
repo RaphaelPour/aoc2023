@@ -61,7 +61,7 @@ func (m M) Find(seed int, fromKey string) (int, error) {
 	for _, r := range m.data[key] {
 		// fmt.Println(seed, r)
 		if seed < r.sourceStart || seed > r.sourceStart+r._range {
-			value := 0
+			value := 10000000000
 			if key.to != "location" {
 				value, err = m.Find(seed, key.to)
 				if err != nil {
@@ -75,7 +75,7 @@ func (m M) Find(seed int, fromKey string) (int, error) {
 		}
 
 		for i := 0; i < r._range; i++ {
-			value := 0
+			value := 1000000000000
 			source := seed - r.sourceStart
 			destination := r.destinationStart + source + i
 			// fmt.Println(seed, r, source, destination)
