@@ -25,7 +25,7 @@ type Range struct {
 
 func (r Range) project(in int) (int, bool) {
 	// return input iteself it is out-of-range
-	if in < r.sourceStart || in > r.sourceStart+r.length {
+	if in < r.sourceStart || in >= r.sourceStart+r.length {
 		return -1, false
 	}
 
@@ -180,7 +180,7 @@ func part1(data []string) int {
 
 func work(start, length int, maps M) int {
 	min := -1
-	for j := start; j <= start+length; j += 1 {
+	for j := start; j < start+length; j += 1 {
 		val, err := maps.Find(j, "seed", "location", 0)
 		if err != nil {
 			fmt.Println(err)
