@@ -11,6 +11,13 @@ import (
 
 type HandType int
 
+func max(a, b HandType) HandType {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 const (
 	HIGH_CARD_TYPE HandType = iota
 	ONE_PAIR_TYPE
@@ -43,6 +50,14 @@ var (
 
 type Cards []int
 
+func (c Cards) String() string {
+	out := ""
+	for _, card := range c {
+		out += string(cardOrderP2[card])
+	}
+	return out
+}
+
 type Hand struct {
 	id    string
 	cards Cards
@@ -74,57 +89,73 @@ func NewHand(cards []rune, bid int, p2 bool) Hand {
 	}
 
 	h.cards = crds
-	h.kind = h.Type(p2)
+
+	if p2 {
+		h.kind = Perm(crds)
+	} else {
+		h.kind = Type(crds)
+	}
 	return h
 }
 
-func (h Hand) Type(p2 bool) HandType {
+func Perm(cards Cards) HandType {
 	hist := make(map[int]int)
-	for _, card := range h.cards {
+	for _, card := range cards {
+		hist[card] = hist[card] + 1
+	}
+
+	if hist[joker] == 0 {
+		return Type(cards)
+	}
+
+	kind := Type(cards)
+	for i, card := range cards {
+		if card != joker {
+			continue
+		}
+
+		for card2 := range cardOrderP2 {
+			if card2 == joker {
+				continue
+			}
+			kind = max(kind, Perm(append(append(append(Cards{}, cards[:i]...), card2), cards[i+1:]...)))
+		}
+
+		if kind == FIVE_OF_A_KIND_TYPE {
+			return kind
+		}
+	}
+
+	return kind
+}
+
+func Type(cards Cards) HandType {
+	hist := make(map[int]int)
+	for _, card := range cards {
 		hist[card] = hist[card] + 1
 	}
 
 	// check Hive
-	for card, count := range hist {
-		if count == 5 || (p2 && hist[joker]+count >= 5 && card != joker) {
+	for _, count := range hist {
+		if count == 5 {
 			return FIVE_OF_A_KIND_TYPE
 		}
 	}
 
 	// check Four
-	for card, count := range hist {
-		if count == 4 || (p2 && hist[joker]+count >= 4 && card != joker) {
+	for _, count := range hist {
+		if count == 4 {
 			return FOUR_OF_A_KIND_TYPE
 		}
 	}
 
 	// check full house
 	pair := -1
-	jokerClaimed := hist[joker]
 	trio := -1
 	for card, count := range hist {
-		if count == 2 || (p2 && jokerClaimed+count >= 2 && card != joker) {
-			jokerClaimed -= (2 - count)
+		if count == 2 {
 			pair = card
-		} else if count == 3 || (p2 && jokerClaimed+count >= 3 && card != joker) {
-			jokerClaimed -= (3 - count)
-			trio = card
-		}
-	}
-
-	if pair >= 0 && trio >= 0 {
-		return FULL_HOUSE_TYPE
-	}
-
-	pair = -1
-	jokerClaimed = hist[joker]
-	trio = -1
-	for card, count := range hist {
-		if count == 3 || (p2 && jokerClaimed+count >= 3 && card != joker) {
-			jokerClaimed -= (3 - count)
-			pair = card
-		} else if count == 2 || (p2 && jokerClaimed+count >= 2 && card != joker) {
-			jokerClaimed -= (2 - count)
+		} else if count == 3 {
 			trio = card
 		}
 	}
@@ -134,20 +165,18 @@ func (h Hand) Type(p2 bool) HandType {
 	}
 
 	// check three
-	for card, count := range hist {
-		if count == 3 || (p2 && hist[joker]+count >= 3 && card != joker) {
+	for _, count := range hist {
+		if count == 3 {
 			return THREE_OF_A_KIND_TYPE
 		}
 	}
 
 	// check Two pairs
 	pair1 := -1
-	jokerClaimed = hist[joker]
 	pair2 := -1
 	for card, count := range hist {
-		if count == 2 || (p2 && jokerClaimed+count >= 2 && card != joker) {
+		if count == 2 {
 			if pair1 == -1 {
-				jokerClaimed -= (2 - count)
 				pair1 = card
 			} else {
 				pair2 = card
