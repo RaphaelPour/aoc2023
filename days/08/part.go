@@ -153,6 +153,6 @@ func main() {
 	//fmt.Println(part1(data))
 
 	fmt.Println("== [ PART 2 ] ==")
-	fmt.Println("too low: 1747000000")
+	fmt.Println("too low: 12026000000")
 	fmt.Println(part2(data))
 }
