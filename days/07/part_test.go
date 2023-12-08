@@ -38,6 +38,10 @@ func TestHand1(t *testing.T) {
 		{name: "three 1", in: "QQQ12", expected: THREE_OF_A_KIND_TYPE},
 		{name: "three 2", in: "QQJ12", expected: THREE_OF_A_KIND_TYPE},
 		{name: "three 3", in: "QJJ12", expected: THREE_OF_A_KIND_TYPE},
+		{name: "two pair 1", in: "QQKK2", expected: TWO_PAIR_TYPE},
+		{name: "two pair 2", in: "QQKJ2", expected: TWO_PAIR_TYPE},
+		{name: "one pair 1", in: "QQ123", expected: ONE_PAIR_TYPE},
+		{name: "one pair 2", in: "QJ123", expected: ONE_PAIR_TYPE},
 	} {
 		t.Run(tCase.name, func(t *testing.T) {
 			h := NewHand([]rune(tCase.in), 0, true)

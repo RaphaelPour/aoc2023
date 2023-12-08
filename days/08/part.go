@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dougwatson/Go/v3/math/lcm"
+
 	"github.com/RaphaelPour/stellar/input"
 )
 
@@ -25,13 +27,12 @@ type Direction struct {
 
 func (d *Direction) Next() rune {
 	r := rune(d.directions[d.pos%len(d.directions)])
-	d.pos += 1
+	d.pos++
 	return r
 }
 
-func Search(current Node, nodes Nodes, dir Direction, goal string) int {
-	fmt.Println(current.current)
-	if current.current == goal {
+func Search(current Node, nodes Nodes, dir Direction) int {
+	if current.current[2] == 'Z' {
 		return 0
 	}
 
@@ -46,7 +47,7 @@ func Search(current Node, nodes Nodes, dir Direction, goal string) int {
 		return 0
 	}
 
-	return 1 + Search(next, nodes, dir, goal)
+	return 1 + Search(next, nodes, dir)
 }
 
 var p2CurrentNodes []Node
@@ -57,12 +58,12 @@ func Search2() int {
 	for {
 		d := p2Dir.Next()
 		if p2Dir.pos%1000000 == 0 {
-			fmt.Println(p2Dir.pos)
+			fmt.Println(p2Dir.pos, p2CurrentNodes)
 		}
 		goalReached := true
 		for i, n := range p2CurrentNodes {
 			// skip nodes that already have reached their goal
-			if !strings.HasSuffix(n.current, "Z") {
+			if n.current[2] != 'Z' {
 				goalReached = false
 			}
 
@@ -109,7 +110,7 @@ func part1(data []string) int {
 		}
 	}
 
-	return Search(nodes["AAA"], nodes, directions, "ZZZ")
+	return Search(nodes["AAA"], nodes, directions)
 }
 
 func part2(data []string) int {
@@ -138,14 +139,18 @@ func part2(data []string) int {
 		}
 	}
 
-	return Search2()
+	result := 0
+	for _, node := range p2CurrentNodes {
+		lcm.Lcm(int64(result), int64(Search(node, p2Nodes, p2Dir)))
+	}
+	return result
 }
 
 func main() {
-	data := input.LoadString("input")
+	data := input.LoadString("input3")
 
-	fmt.Println("== [ PART 1 ] ==")
-	fmt.Println(part1(data))
+	//fmt.Println("== [ PART 1 ] ==")
+	//fmt.Println(part1(data))
 
 	fmt.Println("== [ PART 2 ] ==")
 	fmt.Println("too low: 1747000000")
