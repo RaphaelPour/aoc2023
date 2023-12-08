@@ -3,9 +3,6 @@ package main
 import (
 	"fmt"
 	"regexp"
-	"strings"
-
-	"github.com/dougwatson/Go/v3/math/lcm"
 
 	"github.com/RaphaelPour/stellar/input"
 )
@@ -50,46 +47,6 @@ func Search(current Node, nodes Nodes, dir Direction) int {
 	return 1 + Search(next, nodes, dir)
 }
 
-var p2CurrentNodes []Node
-var p2Nodes Nodes
-var p2Dir Direction
-
-func Search2() int {
-	for {
-		d := p2Dir.Next()
-		if p2Dir.pos%1000000 == 0 {
-			fmt.Println(p2Dir.pos, p2CurrentNodes)
-		}
-		goalReached := true
-		for i, n := range p2CurrentNodes {
-			// skip nodes that already have reached their goal
-			if n.current[2] != 'Z' {
-				goalReached = false
-			}
-
-			var nextNode Node
-			if d == 'L' {
-				nextNode = p2Nodes[n.left]
-			} else {
-				nextNode = p2Nodes[n.right]
-			}
-
-			// skip loops
-			if nextNode == n {
-				return 0
-			}
-
-			p2CurrentNodes[i] = nextNode
-
-			// nextNodes = append(nextNodes, nextNode)
-		}
-
-		if goalReached {
-			return p2Dir.pos - 1
-		}
-	}
-}
-
 func part1(data []string) int {
 	directions := Direction{
 		directions: data[0],
@@ -113,12 +70,25 @@ func part1(data []string) int {
 	return Search(nodes["AAA"], nodes, directions)
 }
 
+// https://en.wikipedia.org/wiki/Euclidean_algorithm#Implementations
+func gcd(a, b int) int {
+	if b == 0 {
+		return a
+	}
+	return gcd(b, a%b)
+}
+
+// https://stackoverflow.com/a/3154503
+func lcm(a, b int) int {
+	return a * b / gcd(a, b)
+}
+
 func part2(data []string) int {
-	p2Dir = Direction{
+	dir := Direction{
 		directions: data[0],
 	}
-	p2Nodes = make(Nodes)
-	p2CurrentNodes = make([]Node, 0)
+	nodes := make(Nodes)
+	startNodes := make([]Node, 0)
 
 	for _, line := range data[2:] {
 		match := pattern.FindStringSubmatch(line)
@@ -132,27 +102,26 @@ func part2(data []string) int {
 			left:    match[2],
 			right:   match[3],
 		}
-		p2Nodes[match[1]] = node
+		nodes[match[1]] = node
 
-		if strings.HasSuffix(node.current, "A") {
-			p2CurrentNodes = append(p2CurrentNodes, node)
+		if node.current[2] == 'A' {
+			startNodes = append(startNodes, node)
 		}
 	}
 
-	result := 0
-	for _, node := range p2CurrentNodes {
-		lcm.Lcm(int64(result), int64(Search(node, p2Nodes, p2Dir)))
+	result := Search(startNodes[0], nodes, dir)
+	for _, node := range startNodes[1:] {
+		result = lcm(result, Search(node, nodes, dir))
 	}
 	return result
 }
 
 func main() {
-	data := input.LoadString("input3")
+	data := input.LoadString("input")
 
-	//fmt.Println("== [ PART 1 ] ==")
-	//fmt.Println(part1(data))
+	fmt.Println("== [ PART 1 ] ==")
+	fmt.Println(part1(data))
 
 	fmt.Println("== [ PART 2 ] ==")
-	fmt.Println("too low: 12026000000")
 	fmt.Println(part2(data))
 }
