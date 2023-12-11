@@ -4,13 +4,14 @@ import (
 	"fmt"
 
 	"github.com/RaphaelPour/stellar/input"
+	s_math "github.com/RaphaelPour/stellar/math"
 )
 
 type Map struct {
 	w, h     int
 	fields   [][]bool
-	emptyX   map[int]struct{}
-	emptyY   map[int]struct{}
+	emptyX   []int
+	emptyY   []int
 	galaxies []P
 }
 
@@ -43,7 +44,7 @@ func (p P) Add(other P) P {
 }
 
 func (p P) Dist(other P) int {
-	return (p.x - other.x) + (p.y - other.y)
+	return s_math.Abs(p.x-other.x) + s_math.Abs(p.y-other.y)
 }
 
 func (p P) Equal(other P) bool {
@@ -53,7 +54,7 @@ func (p P) Equal(other P) bool {
 func part1(data []string) int {
 	m := Map{}
 	m.fields = make([][]bool, len(data))
-	m.emptyX = make(map[int]struct{})
+	m.emptyX = make([]int, 0)
 	m.h = len(data)
 	m.w = len(data[0])
 	m.galaxies = make([]P, 0)
@@ -64,23 +65,20 @@ func part1(data []string) int {
 		for x, field := range line {
 			m.fields[y][x] = (field == '#')
 			if field == '#' {
-				m.galaxies = append(m.galaxies, P{x, y})
 				foundGalaxie = true
 			}
 		}
 
 		if !foundGalaxie {
-			m.emptyX[y] = struct{}{}
+			m.emptyX = append(m.emptyX, y)
 		}
 	}
 
-	m.PrintMap()
-
-	for y := range m.emptyX {
+	for i := len(m.emptyX) - 1; i >= 0; i-- {
+		y := m.emptyX[i]
+		m.h++
 		m.fields = append(append(m.fields[:y], m.fields[y]), m.fields[y:]...)
 	}
-
-	m.PrintMap()
 
 	// check empty y lines
 	for x := 0; x < m.w; x++ {
@@ -92,18 +90,35 @@ func part1(data []string) int {
 			}
 		}
 		if !foundGalaxie {
-			m.emptyY[x] = struct{}{}
+			m.emptyY = append(m.emptyY, x)
 		}
 	}
 
-	for x := range m.emptyY {
-		for y := len(m.fields) - 1; y > 0; y-- {
-			m.fields[y] = append(append(m.fields[y][:x], false), m.fields[y][x+1:]...)
+	for i := len(m.emptyY) - 1; i >= 0; i-- {
+		x := m.emptyY[i]
+		m.w++
+		for y := len(m.fields) - 1; y >= 0; y-- {
+			m.fields[y] = append(append(m.fields[y][:x], false), m.fields[y][x:]...)
 		}
 	}
-	m.PrintMap()
 
-	return 0
+	// find galaxies
+	for y := range m.fields {
+		for x := range m.fields[y] {
+			if m.fields[y][x] {
+				m.galaxies = append(m.galaxies, P{x, y})
+			}
+		}
+	}
+
+	sum := 0
+	for i := 0; i < len(m.galaxies)-1; i++ {
+		for j := i + 1; j < len(m.galaxies); j++ {
+			sum += m.galaxies[i].Dist(m.galaxies[j])
+		}
+	}
+
+	return sum
 }
 
 func part2(data []string) int {
@@ -111,7 +126,7 @@ func part2(data []string) int {
 }
 
 func main() {
-	data := input.LoadString("input1")
+	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
