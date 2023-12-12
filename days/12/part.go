@@ -34,7 +34,7 @@ const (
 )
 
 type Row struct {
-	fields  []FieldType
+	fields  string
 	damaged []int
 }
 
@@ -43,25 +43,25 @@ func NewRow(in string) Row {
 
 	parts := strings.Split(in, " ")
 
-	r.fields = make([]FieldType, len(parts[0]))
-	r.damaged = make([]int, len(parts[1])/2+1)
+	r.fields = parts[0]
+	r.damaged = make([]int, 0)
 
-	for i, field := range parts[0] {
-		r.fields[i] = ParseFieldType(field)
-	}
-
-	for i, damaged := range strings.Split(parts[1], ",") {
-		r.damaged[i] = s_strings.ToInt(damaged)
+	for _, damaged := range strings.Split(parts[1], ",") {
+		r.damaged = append(r.damaged, s_strings.ToInt(damaged))
 	}
 
 	return r
 }
 
-func GoalReached(in []FieldType, goal []int) bool {
+func GoalReached(in string, goal []int) bool {
+	if strings.Index(in, "#") >= 0 && len(goal) == 0 {
+		return false
+	}
+
 	i := 0
 	count := 0
 	for _, field := range in {
-		if field == OPERATIONAL {
+		if field == '.' {
 			if count > 0 {
 				if i >= len(goal) || goal[i] != count {
 					return false
@@ -73,7 +73,7 @@ func GoalReached(in []FieldType, goal []int) bool {
 			continue
 		}
 
-		if field == DAMAGED {
+		if field == '#' {
 			count++
 			continue
 		}
@@ -86,14 +86,10 @@ func GoalReached(in []FieldType, goal []int) bool {
 		return i == len(goal)-1 && goal[i] == count
 	}
 
-	return i >= len(goal)
+	return i == len(goal)
 }
 
-func Find(in []FieldType, goal []int, visited map[string]struct{}, depth int) int {
-	if _, ok := visited[fmt.Sprintf("%s", in)]; ok {
-		return 0
-	}
-	visited[fmt.Sprintf("%s", in)] = struct{}{}
+func Find(in string, goal []int, depth int) int {
 	// fmt.Println("candidate:", in)
 
 	if GoalReached(in, goal) {
@@ -102,15 +98,12 @@ func Find(in []FieldType, goal []int, visited map[string]struct{}, depth int) in
 	}
 
 	sum := 0
-	for i := range in {
-		if in[i] != UNKNOWN {
-			continue
-		}
-
-		tmp := append([]FieldType{}, in[:i]...)
-		sum += Find(append(append(tmp, DAMAGED), in[i+1:]...), goal, visited, depth+1)
-		sum += Find(append(append(tmp, OPERATIONAL), in[i+1:]...), goal, visited, depth+1)
+	idx := strings.Index(in, "?")
+	if idx >= 0 {
+		sum += Find(fmt.Sprintf("%s#%s", in[:idx], in[idx+1:]), goal, depth+1)
+		sum += Find(fmt.Sprintf("%s.%s", in[:idx], in[idx+1:]), goal, depth+1)
 	}
+
 	return sum
 }
 
@@ -125,7 +118,7 @@ func part1(data []string) int {
 	for i, line := range data {
 		fmt.Println("======>", i+1, "/", len(data), "<======")
 		row := NewRow(line)
-		result := Find(row.fields, row.damaged, map[string]struct{}{}, 0)
+		result := Find(row.fields, row.damaged, 0)
 		newLap := time.Now()
 		fmt.Printf("%s => %d in %.2fs (%.2f total)\n", line, result, newLap.Sub(lap).Seconds(), newLap.Sub(start).Seconds())
 		lap = newLap
@@ -143,6 +136,7 @@ func main() {
 	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
+	fmt.Println("too low: 7395")
 	fmt.Println(part1(data))
 
 	// fmt.Println("== [ PART 2 ] ==")
