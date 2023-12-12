@@ -17,6 +17,7 @@ const (
 	NORTH_WEST_PIPE  //   J
 	SOUTH_WEST_PIPE  //   7
 	SOUTH_EAST_PIPE  //   F
+	FILLED
 )
 
 func (p Pipe) String() string {
@@ -33,7 +34,6 @@ func (p Pipe) String() string {
 }
 
 func (p Pipe) Neighbor(x, y int) bool {
-	fmt.Println(P{x, y}, p)
 	if p == START_PIPE {
 		return true
 	}
@@ -199,6 +199,30 @@ func Search(pos, from P, m Map) ([]P, bool) {
 	return nil, false
 }
 
+func (m Map) Fill(start P) {
+	if start.x < 0 || start.x >= m.w || start.y < 0 || start.y >= m.h {
+		return
+	}
+
+	if m.fields[start.y][start.x] == FILLED {
+		return
+	}
+
+	if _, ok := m.visited[start]; ok {
+		return
+	}
+
+	m.fields[start.y][start.x] = FILLED
+	for y := -1; y <= 1; y++ {
+		for x := -1; x <= 1; x++ {
+			if x == 0 && y == 0 {
+				continue
+			}
+			m.Fill(start.Add(P{x, y}))
+		}
+	}
+}
+
 func NewMap(in []string) Map {
 	m := Map{}
 	m.fields = make([][]Pipe, len(in))
@@ -234,39 +258,35 @@ func part1(data []string) int {
 
 func part2(data []string) int {
 	m := NewMap(data)
-	path, ok := Search(m.start, P{-1, -1}, m)
+	_, ok := Search(m.start, P{-1, -1}, m)
 	if !ok {
 		fmt.Println("no path found")
 		return -1
 	}
 
-	min := P{100, 100}
-	max := P{}
-	for _, p := range path {
-		min = min.Min(p)
-		max = max.Max(p)
+	for y := 0; y < m.h; y++ {
+		m.Fill(P{0, y})
+		m.Fill(P{m.w - 1, y})
 	}
 
-	pipeMap := make(map[P]struct{})
-	for _, p := range path {
-		pipeMap[p] = struct{}{}
+	for x := 0; x < m.w; x++ {
+		m.Fill(P{x, 0})
+		m.Fill(P{x, m.h - 1})
 	}
 
+	// Count filled
 	sum := 0
-	for y := min.y; y <= max.y; y++ {
-		inside := false
-		for x := min.x; x <= max.x; x++ {
-			if _, ok := pipeMap[P{x, y}]; ok {
-				fmt.Print(".")
-				inside = !inside
-				continue
-			}
+	for y := 0; y < m.h; y++ {
+		for x := 0; x < m.w; x++ {
 
-			if inside && y != min.y && y != max.y {
+			f := m.fields[y][x]
+			if f == FILLED {
+				fmt.Print("O")
+			} else if f == EMPTY_PIPE {
 				fmt.Print("I")
 				sum++
 			} else {
-				fmt.Print("O")
+				fmt.Print(".")
 			}
 		}
 		fmt.Println("")
@@ -275,13 +295,15 @@ func part2(data []string) int {
 }
 
 func main() {
-	data := input.LoadString("input3")
+	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println("too low: 7101")
 	fmt.Println(part1(data))
 
 	fmt.Println("== [ PART 2 ] ==")
-	fmt.Println("too high: 1472")
+	fmt.Println("too low: 236")
+	fmt.Println("bad: 222, 371, 968, 1068")
+	fmt.Println("too high: 1019, 1472")
 	fmt.Println(part2(data))
 }

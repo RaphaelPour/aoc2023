@@ -10,3 +10,7 @@ import (
 func TestPart1(t *testing.T) {
 	require.Equal(t, 7102, part1(input.LoadString("input")))
 }
+
+func TestExamplePart1(t *testing.T) {
+	require.Equal(t, 4, part1(input.LoadString("input1")))
+}
