@@ -110,6 +110,28 @@ func (p P) Equal(other P) bool {
 	return p.x == other.x && p.y == other.y
 }
 
+func (p P) Min(other P) P {
+	if p.x > other.x {
+		p.x = other.x
+	}
+
+	if p.y > other.y {
+		p.y = other.y
+	}
+	return p
+}
+
+func (p P) Max(other P) P {
+	if p.x < other.x {
+		p.x = other.x
+	}
+
+	if p.y < other.y {
+		p.y = other.y
+	}
+	return p
+}
+
 type Map struct {
 	w, h    int
 	fields  [][]Pipe
@@ -211,16 +233,55 @@ func part1(data []string) int {
 }
 
 func part2(data []string) int {
-	return 0
+	m := NewMap(data)
+	path, ok := Search(m.start, P{-1, -1}, m)
+	if !ok {
+		fmt.Println("no path found")
+		return -1
+	}
+
+	min := P{100, 100}
+	max := P{}
+	for _, p := range path {
+		min = min.Min(p)
+		max = max.Max(p)
+	}
+
+	pipeMap := make(map[P]struct{})
+	for _, p := range path {
+		pipeMap[p] = struct{}{}
+	}
+
+	sum := 0
+	for y := min.y; y <= max.y; y++ {
+		inside := false
+		for x := min.x; x <= max.x; x++ {
+			if _, ok := pipeMap[P{x, y}]; ok {
+				fmt.Print(".")
+				inside = !inside
+				continue
+			}
+
+			if inside && y != min.y && y != max.y {
+				fmt.Print("I")
+				sum++
+			} else {
+				fmt.Print("O")
+			}
+		}
+		fmt.Println("")
+	}
+	return sum
 }
 
 func main() {
-	data := input.LoadString("input")
+	data := input.LoadString("input3")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println("too low: 7101")
 	fmt.Println(part1(data))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println("too high: 1472")
+	fmt.Println(part2(data))
 }
