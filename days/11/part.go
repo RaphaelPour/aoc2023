@@ -8,11 +8,88 @@ import (
 )
 
 type Map struct {
-	w, h     int
-	fields   [][]bool
-	emptyX   []int
-	emptyY   []int
-	galaxies []P
+	w, h   int
+	fields [][]bool
+	emptyX map[int]struct{}
+	emptyY map[int]struct{}
+}
+
+func NewMap(data []string) Map {
+	m := Map{}
+	m.fields = make([][]bool, len(data))
+	m.emptyX = make(map[int]struct{})
+	m.emptyY = make(map[int]struct{})
+	m.h = len(data)
+	m.w = len(data[0])
+
+	for y, line := range data {
+		m.fields[y] = make([]bool, len(data))
+		foundGalaxie := false
+		for x, field := range line {
+			m.fields[y][x] = (field == '#')
+			if field == '#' {
+				foundGalaxie = true
+			}
+		}
+
+		if !foundGalaxie {
+			m.emptyX[y] = struct{}{}
+		}
+	}
+
+	// check empty y lines
+	for x := 0; x < m.w; x++ {
+		foundGalaxie := false
+		for y := 0; y < m.h; y++ {
+			if m.fields[y][x] {
+				foundGalaxie = true
+				break
+			}
+		}
+		if !foundGalaxie {
+			m.emptyY[x] = struct{}{}
+		}
+	}
+
+	return m
+}
+
+func (m Map) FindGalaxies() []P {
+	galaxies := make([]P, 0)
+	// find galaxies
+	for y := range m.fields {
+		for x := range m.fields[y] {
+			if m.fields[y][x] {
+				galaxies = append(galaxies, P{x, y})
+			}
+		}
+	}
+
+	return galaxies
+}
+
+func (m Map) Sum(expansion int) int {
+	galaxies := m.FindGalaxies()
+
+	sum := 0
+	for i := 0; i < len(galaxies)-1; i++ {
+		for j := i + 1; j < len(galaxies); j++ {
+			sum += galaxies[i].Dist(galaxies[j])
+
+			for y := range m.emptyX {
+				if within(y, galaxies[i].y, galaxies[j].y) {
+					sum += expansion
+				}
+			}
+
+			for x := range m.emptyY {
+				if within(x, galaxies[i].x, galaxies[j].x) {
+					sum += expansion
+				}
+			}
+		}
+	}
+	return sum
 }
 
 func (m Map) PrintMap() {
@@ -52,77 +129,15 @@ func (p P) Equal(other P) bool {
 }
 
 func part1(data []string) int {
-	m := Map{}
-	m.fields = make([][]bool, len(data))
-	m.emptyX = make([]int, 0)
-	m.h = len(data)
-	m.w = len(data[0])
-	m.galaxies = make([]P, 0)
+	return NewMap(data).Sum(1)
+}
 
-	for y, line := range data {
-		m.fields[y] = make([]bool, len(data))
-		foundGalaxie := false
-		for x, field := range line {
-			m.fields[y][x] = (field == '#')
-			if field == '#' {
-				foundGalaxie = true
-			}
-		}
-
-		if !foundGalaxie {
-			m.emptyX = append(m.emptyX, y)
-		}
-	}
-
-	for i := len(m.emptyX) - 1; i >= 0; i-- {
-		y := m.emptyX[i]
-		m.h++
-		m.fields = append(append(m.fields[:y], m.fields[y]), m.fields[y:]...)
-	}
-
-	// check empty y lines
-	for x := 0; x < m.w; x++ {
-		foundGalaxie := false
-		for y := 0; y < m.h; y++ {
-			if m.fields[y][x] {
-				foundGalaxie = true
-				break
-			}
-		}
-		if !foundGalaxie {
-			m.emptyY = append(m.emptyY, x)
-		}
-	}
-
-	for i := len(m.emptyY) - 1; i >= 0; i-- {
-		x := m.emptyY[i]
-		m.w++
-		for y := len(m.fields) - 1; y >= 0; y-- {
-			m.fields[y] = append(append(m.fields[y][:x], false), m.fields[y][x:]...)
-		}
-	}
-
-	// find galaxies
-	for y := range m.fields {
-		for x := range m.fields[y] {
-			if m.fields[y][x] {
-				m.galaxies = append(m.galaxies, P{x, y})
-			}
-		}
-	}
-
-	sum := 0
-	for i := 0; i < len(m.galaxies)-1; i++ {
-		for j := i + 1; j < len(m.galaxies); j++ {
-			sum += m.galaxies[i].Dist(m.galaxies[j])
-		}
-	}
-
-	return sum
+func within(n, b1, b2 int) bool {
+	return (n >= b1 && n <= b2) || (n >= b2 && n <= b1)
 }
 
 func part2(data []string) int {
-	return 0
+	return NewMap(data).Sum(1000000 - 1)
 }
 
 func main() {
@@ -131,6 +146,6 @@ func main() {
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println(part2(data))
 }
