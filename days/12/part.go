@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/RaphaelPour/stellar/input"
 	s_strings "github.com/RaphaelPour/stellar/strings"
@@ -119,11 +120,16 @@ type Springs struct {
 
 func part1(data []string) int {
 	sum := 0
+	start := time.Now()
+	lap := time.Now()
 	for i, line := range data {
 		fmt.Println("======>", i+1, "/", len(data), "<======")
 		row := NewRow(line)
 		result := Find(row.fields, row.damaged, map[string]struct{}{}, 0)
-		fmt.Println(line, "=>", result)
+		newLap := time.Now()
+		fmt.Printf("%s => %d in %.2fs (%.2f total)\n", line, result, newLap.Sub(lap).Seconds(), newLap.Sub(start).Seconds())
+		lap = newLap
+
 		sum += result
 	}
 	return sum
