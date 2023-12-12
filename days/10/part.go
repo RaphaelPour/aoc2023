@@ -229,7 +229,7 @@ func part1(data []string) int {
 		return -1
 	}
 
-	return (len(path) / 2) - 1
+	return int(float64(len(path))/2) + 1
 }
 
 func part2(data []string) int {
