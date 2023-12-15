@@ -144,6 +144,8 @@ func (m Map) PrintMap(pos P) {
 		for x := range m.fields[y] {
 			if pos.x == x && pos.y == y {
 				fmt.Print("x")
+			} else if m.start.x == x && m.start.y == y {
+				fmt.Print("S")
 			} else {
 				fmt.Print(m.fields[y][x])
 			}
@@ -208,7 +210,7 @@ func (m Map) Fill(start P) {
 		return
 	}
 
-	if _, ok := m.visited[P{start.x / 3, start.y / 3}]; ok {
+	if _, ok := m.visited[P{start.x, start.y}]; ok {
 		return
 	}
 
@@ -255,6 +257,8 @@ func Tile(p Pipe) [][]Pipe {
 			{EAST_WEST_PIPE, SOUTH_WEST_PIPE, EMPTY_PIPE},
 			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
 		}
+	case START_PIPE:
+		fallthrough
 	case SOUTH_EAST_PIPE:
 		return [][]Pipe{
 			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
@@ -281,13 +285,31 @@ func (m *Map) Expand() {
 			tile := Tile(m.fields[y][x])
 			for y1 := 0; y1 < 3; y1++ {
 				for x1 := 0; x1 < 3; x1++ {
-					fields[y+y1][x+x1] = tile[y1][x1]
+					fields[3*y+y1][3*x+x1] = tile[y1][x1]
 				}
 			}
 		}
 	}
 
+	/*
+		visited := make(map[P]struct{})
+		for p := range m.visited {
+			tile := Tile(m.fields[p.y][p.x])
+			for y := 0; y < 3; y++ {
+				for x := 0; x < 3; x++ {
+					if tile[y][x] == EMPTY_PIPE {
+						continue
+					}
+					visited[P{x + p.x*3, y + p.y*3}] = struct{}{}
+				}
+			}
+		}
+
+		//visited[m.start] = struct{}{}
+		m.visited = visited
+	*/
 	m.fields = fields
+	m.start = P{m.start.x * 3, m.start.y * 3}
 	m.h = len(m.fields)
 	m.w = len(m.fields[0])
 }
@@ -327,13 +349,14 @@ func part1(data []string) int {
 
 func part2(data []string) int {
 	m := NewMap(data)
+
+	m.Expand()
+	m.PrintMap(P{-1, -1})
 	_, ok := Search(m.start, P{-1, -1}, m)
 	if !ok {
 		fmt.Println("no path found")
 		return -1
 	}
-
-	m.Expand()
 
 	for y := 0; y < m.h; y++ {
 		m.Fill(P{0, y})
@@ -345,22 +368,29 @@ func part2(data []string) int {
 		m.Fill(P{x, m.h - 1})
 	}
 
-	// Count filled
-	sum := 0
-	for y := 0; y < len(m.fields); y += 3 {
-		for x := 0; x < len(m.fields[0]); x += 3 {
+	for y := 0; y < len(m.fields); y++ {
+		for x := 0; x < len(m.fields[0]); x++ {
 
-			f := m.fields[y+1][x+1]
+			f := m.fields[y][x]
 			if f == FILLED {
 				fmt.Print("O")
 			} else if f == EMPTY_PIPE {
 				fmt.Print("I")
-				sum++
 			} else {
 				fmt.Print(".")
 			}
 		}
 		fmt.Println("")
+	}
+
+	// Count filled
+	sum := 0
+	for y := 0; y < len(m.fields); y += 3 {
+		for x := 0; x < len(m.fields[0]); x += 3 {
+			if m.fields[y+1][x+1] == EMPTY_PIPE {
+				sum++
+			}
+		}
 	}
 	return sum
 }
