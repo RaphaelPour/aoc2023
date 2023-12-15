@@ -208,7 +208,7 @@ func (m Map) Fill(start P) {
 		return
 	}
 
-	if _, ok := m.visited[start]; ok {
+	if _, ok := m.visited[P{start.x / 3, start.y / 3}]; ok {
 		return
 	}
 
@@ -221,6 +221,75 @@ func (m Map) Fill(start P) {
 			m.Fill(start.Add(P{x, y}))
 		}
 	}
+}
+
+func Tile(p Pipe) [][]Pipe {
+	switch p {
+	case NORTH_NORTH_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+		}
+	case NORTH_EAST_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, NORTH_EAST_PIPE, EAST_WEST_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+		}
+	case EAST_WEST_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EAST_WEST_PIPE, EAST_WEST_PIPE, EAST_WEST_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+		}
+	case NORTH_WEST_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+			{EAST_WEST_PIPE, NORTH_WEST_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+		}
+	case SOUTH_WEST_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EAST_WEST_PIPE, SOUTH_WEST_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+		}
+	case SOUTH_EAST_PIPE:
+		return [][]Pipe{
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, SOUTH_EAST_PIPE, EAST_WEST_PIPE},
+			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
+		}
+	default:
+		return [][]Pipe{
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+		}
+	}
+}
+
+func (m *Map) Expand() {
+	fields := make([][]Pipe, len(m.fields)*3)
+	for y := 0; y < len(m.fields)*3; y++ {
+		fields[y] = make([]Pipe, len(m.fields[0])*3)
+	}
+
+	for y := range m.fields {
+		for x := range m.fields[y] {
+			tile := Tile(m.fields[y][x])
+			for y1 := 0; y1 < 3; y1++ {
+				for x1 := 0; x1 < 3; x1++ {
+					fields[y+y1][x+x1] = tile[y1][x1]
+				}
+			}
+		}
+	}
+
+	m.fields = fields
+	m.h = len(m.fields)
+	m.w = len(m.fields[0])
 }
 
 func NewMap(in []string) Map {
@@ -264,6 +333,8 @@ func part2(data []string) int {
 		return -1
 	}
 
+	m.Expand()
+
 	for y := 0; y < m.h; y++ {
 		m.Fill(P{0, y})
 		m.Fill(P{m.w - 1, y})
@@ -276,10 +347,10 @@ func part2(data []string) int {
 
 	// Count filled
 	sum := 0
-	for y := 0; y < m.h; y++ {
-		for x := 0; x < m.w; x++ {
+	for y := 0; y < len(m.fields); y += 3 {
+		for x := 0; x < len(m.fields[0]); x += 3 {
 
-			f := m.fields[y][x]
+			f := m.fields[y+1][x+1]
 			if f == FILLED {
 				fmt.Print("O")
 			} else if f == EMPTY_PIPE {
