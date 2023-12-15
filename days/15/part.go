@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/RaphaelPour/stellar/input"
 	sstrings "github.com/RaphaelPour/stellar/strings"
@@ -104,21 +105,11 @@ func part2(data []string) int {
 	boxes := make(HASHMAP, 256)
 
 	for _, entry := range data {
-		match := pattern.FindStringSubmatch(entry)
-		if len(match) != 4 {
-			fmt.Printf("error matching %s: %v\n", entry, match)
-			return -1
-		}
-
-		label := match[1]
-		operation := match[2]
-		if operation == "=" {
-			boxes.Add(label, sstrings.ToInt(match[3]))
-		} else if operation == "-" {
-			boxes.Remove(label)
+		index := strings.Index(entry, "=")
+		if index == -1 {
+			boxes.Remove(string(entry[:len(entry)-1]))
 		} else {
-			fmt.Println("Unknown operation %s\n", operation)
-			return -1
+			boxes.Add(string(entry[:index]), sstrings.ToInt(entry[index+1:]))
 		}
 	}
 
@@ -136,8 +127,10 @@ func main() {
 	data := strings.Split(input.LoadString("input")[0], ",")
 
 	fmt.Println("== [ PART 1 ] ==")
-	fmt.Println(part1(data))
+	start := time.Now()
+	fmt.Println(part1(data), time.Since(start))
 
 	fmt.Println("== [ PART 2 ] ==")
-	fmt.Println(part2(data))
+	start = time.Now()
+	fmt.Println(part2(data), time.Since(start))
 }
