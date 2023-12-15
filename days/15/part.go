@@ -21,21 +21,13 @@ func hash(in string) int {
 	return v
 }
 
-func part1(data []string) int {
-	result := 0
-	for _, line := range data {
-		result += hash(line)
-	}
-	return result
-}
-
 type Lens struct {
 	label       string
 	focalLength int
 }
 
 type Box struct {
-	id     int
+	init   bool
 	lenses []Lens
 }
 
@@ -67,26 +59,25 @@ func (b *Box) Remove(label string) {
 	b.lenses = append(b.lenses[:i], b.lenses[i+1:]...)
 }
 
-func (b Box) FocusPower() int {
+func (b Box) FocusPower(id int) int {
 	result := 0
 	for i, lens := range b.lenses {
-		result += (b.id + 1) * (i + 1) * lens.focalLength
+		result += (id + 1) * (i + 1) * lens.focalLength
 	}
 
 	return result
 }
 
-type HASHMAP map[int]Box
+type HASHMAP []Box
 
 func (h HASHMAP) Add(label string, value int) {
 	key := hash(label)
-	box, ok := h[key]
-	if !ok {
+	box := h[key]
+	if !box.init {
 		box = Box{
-			id:     key,
+			init:   true,
 			lenses: make([]Lens, 0),
 		}
-		h[key] = box
 	}
 
 	box.Add(label, value)
@@ -95,14 +86,22 @@ func (h HASHMAP) Add(label string, value int) {
 
 func (h HASHMAP) Remove(label string) {
 	key := hash(label)
-	if box, ok := h[key]; ok {
-		box.Remove(label)
-		h[key] = box
+	if !h[key].init {
+		return
 	}
+	h[key].Remove(label)
+}
+
+func part1(data []string) int {
+	result := 0
+	for _, line := range data {
+		result += hash(line)
+	}
+	return result
 }
 
 func part2(data []string) int {
-	boxes := make(HASHMAP)
+	boxes := make(HASHMAP, 256)
 
 	for _, entry := range data {
 		match := pattern.FindStringSubmatch(entry)
@@ -124,8 +123,11 @@ func part2(data []string) int {
 	}
 
 	result := 0
-	for _, box := range boxes {
-		result += box.FocusPower()
+	for i, box := range boxes {
+		if !box.init {
+			continue
+		}
+		result += box.FocusPower(i)
 	}
 	return result
 }
