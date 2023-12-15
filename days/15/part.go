@@ -10,19 +10,21 @@ import (
 )
 
 var (
-	pattern = regexp.MustCompile(`^(\w+)([=-])(\d+)$`)
+	pattern = regexp.MustCompile(`^(\w+)([=-])(\d*)$`)
 )
+
+func hash(in string) int {
+	v := 0
+	for _, r := range in {
+		v = ((v + int(r)) * 17) % 256
+	}
+	return v
+}
 
 func part1(data []string) int {
 	result := 0
 	for _, line := range data {
-		currentValue := 0
-		for _, r := range line {
-			currentValue += int(r)
-			currentValue *= 17
-			currentValue = currentValue % 256
-		}
-		result += currentValue
+		result += hash(line)
 	}
 	return result
 }
@@ -33,12 +35,74 @@ type Lens struct {
 }
 
 type Box struct {
-	list []Lens
-	keys map[string]struct{}
+	id     int
+	lenses []Lens
+}
+
+func (b *Box) Add(label string, value int) {
+	i := b.Index(label)
+	if i == -1 {
+		b.lenses = append(b.lenses, Lens{label, value})
+		return
+	}
+
+	b.lenses[i].focalLength = value
+}
+
+func (b Box) Index(label string) int {
+	for i, lens := range b.lenses {
+		if lens.label == label {
+			return i
+		}
+	}
+	return -1
+}
+
+func (b *Box) Remove(label string) {
+	i := b.Index(label)
+	if i == -1 {
+		return
+	}
+
+	b.lenses = append(b.lenses[:i], b.lenses[i+1:]...)
+}
+
+func (b Box) FocusPower() int {
+	result := 0
+	for i, lens := range b.lenses {
+		result += (b.id + 1) * (i + 1) * lens.focalLength
+	}
+
+	return result
+}
+
+type HASHMAP map[int]Box
+
+func (h HASHMAP) Add(label string, value int) {
+	key := hash(label)
+	box, ok := h[key]
+	if !ok {
+		box = Box{
+			id:     key,
+			lenses: make([]Lens, 0),
+		}
+		h[key] = box
+	}
+
+	box.Add(label, value)
+	h[key] = box
+}
+
+func (h HASHMAP) Remove(label string) {
+	key := hash(label)
+	if box, ok := h[key]; ok {
+		box.Remove(label)
+		h[key] = box
+	}
 }
 
 func part2(data []string) int {
-	boxes := make([]Box, 0)
+	boxes := make(HASHMAP)
 
 	for _, entry := range data {
 		match := pattern.FindStringSubmatch(entry)
@@ -48,12 +112,22 @@ func part2(data []string) int {
 		}
 
 		label := match[1]
-		value := sstrings.ToInt(match[3])
-		if match[2] == "=" {
-
+		operation := match[2]
+		if operation == "=" {
+			boxes.Add(label, sstrings.ToInt(match[3]))
+		} else if operation == "-" {
+			boxes.Remove(label)
+		} else {
+			fmt.Println("Unknown operation %s\n", operation)
+			return -1
 		}
-
 	}
+
+	result := 0
+	for _, box := range boxes {
+		result += box.FocusPower()
+	}
+	return result
 }
 
 func main() {
@@ -62,6 +136,6 @@ func main() {
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println(part2(data))
 }
