@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/RaphaelPour/stellar/input"
@@ -33,6 +34,34 @@ func TestExpand(t *testing.T) {
 	require.Equal(t, P{1, 1}, m.start)
 	require.Equal(t, 9, m.w)
 	require.Equal(t, 9, m.h)
+}
+
+func TestFill(t *testing.T) {
+	input := []string{
+		".S-------7",
+		".|.F7....|",
+		".L-J|...FJ",
+		"....L---J.",
+	}
+	m := NewMap(input)
+	require.Equal(t, P{1, 0}, m.start)
+	require.Equal(t, 10, m.w)
+	require.Equal(t, 4, m.h)
+
+	path, ok := Search(m.start, P{-1, -1}, m)
+	require.True(t, ok)
+
+	m.Fill(P{0, 0}, path2Map(path))
+
+	expected := []string{
+		"#S-------7",
+		"#|.F7....|",
+		"#L-J|...FJ",
+		"####L---J.",
+		"",
+	}
+	require.Equal(t, expected, strings.Split(m.String(), "\n"))
+
 }
 
 func TestExample2Part2(t *testing.T) {

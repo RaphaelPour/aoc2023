@@ -4,6 +4,11 @@ import (
 	"fmt"
 
 	"github.com/RaphaelPour/stellar/input"
+	"github.com/fatih/color"
+)
+
+var (
+	print = true
 )
 
 type Pipe int
@@ -18,6 +23,7 @@ const (
 	SOUTH_WEST_PIPE  //   7
 	SOUTH_EAST_PIPE  //   F
 	FILLED
+	INSIDE
 )
 
 func (p Pipe) String() string {
@@ -30,6 +36,8 @@ func (p Pipe) String() string {
 		NORTH_WEST_PIPE:  "J",
 		SOUTH_WEST_PIPE:  "7",
 		SOUTH_EAST_PIPE:  "F",
+		FILLED:           "#",
+		INSIDE:           "I",
 	}[p]
 }
 
@@ -139,15 +147,38 @@ type Map struct {
 	start   P
 }
 
+func (m Map) String() string {
+	out := ""
+	for y := range m.fields {
+		for x := range m.fields[y] {
+			out += m.fields[y][x].String()
+		}
+		out += "\n"
+	}
+	return out
+}
+
 func (m Map) PrintMap(pos P) {
+	if !print {
+		return
+	}
+	posColor := color.New(color.FgHiRed)
+	dotColor := color.New(color.FgBlack, color.Bold)
+	pipeColor := color.New(color.FgGreen)
+	fillColor := color.New(color.FgBlue, color.Bold)
 	for y := range m.fields {
 		for x := range m.fields[y] {
 			if pos.x == x && pos.y == y {
-				fmt.Print("x")
-			} else if m.start.x == x && m.start.y == y {
-				fmt.Print("S")
+				posColor.Print("x")
+				/*else if m.start.x == x && m.start.y == y {
+					fmt.Print("S")
+				} */
+			} else if m.fields[y][x] != EMPTY_PIPE {
+				pipeColor.Print(m.fields[y][x])
+			} else if m.fields[y][x] == FILLED {
+				fillColor.Print("#")
 			} else {
-				fmt.Print(m.fields[y][x])
+				dotColor.Print(m.fields[y][x])
 			}
 		}
 		fmt.Println("")
@@ -155,8 +186,8 @@ func (m Map) PrintMap(pos P) {
 }
 
 func Search(pos, from P, m Map) ([]P, bool) {
-	// fmt.Println("pos: ", pos)
-	// m.PrintMap(pos)
+	//fmt.Println("pos: ", pos)
+	//m.PrintMap(pos)
 	m.visited[pos] = struct{}{}
 
 	currentField := m.fields[pos.y][pos.x]
@@ -164,8 +195,8 @@ func Search(pos, from P, m Map) ([]P, bool) {
 		return []P{pos}, true
 	}
 
-	for y := -1; y <= 1; y++ {
-		for x := -1; x <= 1; x++ {
+	for y := -1; y <= 1; y += 1 {
+		for x := -1; x <= 1; x += 1 {
 			if x == 0 && y == 0 {
 				continue
 			}
@@ -201,7 +232,7 @@ func Search(pos, from P, m Map) ([]P, bool) {
 	return nil, false
 }
 
-func (m Map) Fill(start P) {
+func (m Map) Fill(start P, loop map[P]struct{}) {
 	if start.x < 0 || start.x >= m.w || start.y < 0 || start.y >= m.h {
 		return
 	}
@@ -210,22 +241,19 @@ func (m Map) Fill(start P) {
 		return
 	}
 
-	if _, ok := m.visited[P{start.x, start.y}]; ok {
+	if _, ok := loop[P{start.x, start.y}]; ok {
 		return
 	}
 
 	m.fields[start.y][start.x] = FILLED
-	for y := -1; y <= 1; y++ {
-		for x := -1; x <= 1; x++ {
-			if x == 0 && y == 0 {
-				continue
-			}
-			m.Fill(start.Add(P{x, y}))
-		}
-	}
+	m.Fill(start.Add(P{0, 1}), loop)
+	m.Fill(start.Add(P{0, -1}), loop)
+	m.Fill(start.Add(P{1, 0}), loop)
+	m.Fill(start.Add(P{-1, 0}), loop)
 }
 
-func Tile(p Pipe) [][]Pipe {
+func Tile(fields [][]Pipe, x, y int) [][]Pipe {
+	p := fields[y][x]
 	switch p {
 	case NORTH_NORTH_PIPE:
 		return [][]Pipe{
@@ -257,14 +285,50 @@ func Tile(p Pipe) [][]Pipe {
 			{EAST_WEST_PIPE, SOUTH_WEST_PIPE, EMPTY_PIPE},
 			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
 		}
-	case START_PIPE:
-		fallthrough
 	case SOUTH_EAST_PIPE:
 		return [][]Pipe{
 			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
 			{EMPTY_PIPE, SOUTH_EAST_PIPE, EAST_WEST_PIPE},
 			{EMPTY_PIPE, NORTH_NORTH_PIPE, EMPTY_PIPE},
 		}
+	case START_PIPE:
+		pipes := [][]Pipe{
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, START_PIPE, EMPTY_PIPE},
+			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
+		}
+		if y-1 >= 0 {
+			if p2 := fields[y-1][x]; p2 == NORTH_NORTH_PIPE || p2 == SOUTH_WEST_PIPE || p2 == SOUTH_EAST_PIPE {
+				pipes[0][1] = NORTH_NORTH_PIPE
+			}
+		}
+
+		if y+1 < len(fields) {
+			if p2 := fields[y+1][x]; p2 == NORTH_NORTH_PIPE || p2 == NORTH_WEST_PIPE || p2 == NORTH_EAST_PIPE {
+				pipes[2][1] = NORTH_NORTH_PIPE
+			}
+		}
+
+		if x-1 >= 0 {
+			if p2 := fields[y][x-1]; p2 == EAST_WEST_PIPE || p2 == NORTH_EAST_PIPE || p2 == SOUTH_EAST_PIPE {
+				pipes[1][0] = EAST_WEST_PIPE
+			}
+		}
+
+		if x+1 < len(fields[0]) {
+			if p2 := fields[y][x+1]; p2 == EAST_WEST_PIPE || p2 == NORTH_WEST_PIPE || p2 == SOUTH_WEST_PIPE {
+				pipes[1][2] = EAST_WEST_PIPE
+			}
+		}
+		return pipes
+		/*
+			NORTH_NORTH_PIPE // |
+			NORTH_EAST_PIPE  // L
+			EAST_WEST_PIPE   //  -
+			NORTH_WEST_PIPE  //   J
+			SOUTH_WEST_PIPE  //   7
+			SOUTH_EAST_PIPE  //   F
+		*/
 	default:
 		return [][]Pipe{
 			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
@@ -282,7 +346,7 @@ func (m *Map) Expand() {
 
 	for y := range m.fields {
 		for x := range m.fields[y] {
-			tile := Tile(m.fields[y][x])
+			tile := Tile(m.fields, x, y)
 			for y1 := 0; y1 < 3; y1++ {
 				for x1 := 0; x1 < 3; x1++ {
 					fields[3*y+y1][3*x+x1] = tile[y1][x1]
@@ -291,27 +355,43 @@ func (m *Map) Expand() {
 		}
 	}
 
-	/*
-		visited := make(map[P]struct{})
-		for p := range m.visited {
-			tile := Tile(m.fields[p.y][p.x])
-			for y := 0; y < 3; y++ {
-				for x := 0; x < 3; x++ {
-					if tile[y][x] == EMPTY_PIPE {
-						continue
-					}
-					visited[P{x + p.x*3, y + p.y*3}] = struct{}{}
+	visited := make(map[P]struct{})
+	for p := range m.visited {
+		tile := Tile(m.fields, p.y, p.x)
+		for y := 0; y < 3; y++ {
+			for x := 0; x < 3; x++ {
+				if tile[y][x] == EMPTY_PIPE {
+					continue
 				}
+
+				visited[P{p.x + x + 1, p.y + y + 1}] = struct{}{}
 			}
 		}
+	}
 
-		//visited[m.start] = struct{}{}
-		m.visited = visited
-	*/
+	//visited[m.start] = struct{}{}
+	m.visited = visited
+
 	m.fields = fields
-	m.start = P{m.start.x * 3, m.start.y * 3}
+	// add one, as the start point is in the middle of the tile
+	m.start = P{m.start.x*3 + 1, m.start.y*3 + 1}
+	fmt.Println(m.start)
 	m.h = len(m.fields)
 	m.w = len(m.fields[0])
+}
+
+func (m *Map) Clean(path map[P]struct{}) {
+	for y := range m.fields {
+		for x := range m.fields[y] {
+			if m.fields[y][x] == EMPTY_PIPE {
+				continue
+			}
+
+			if _, ok := path[P{x, y}]; !ok {
+				m.fields[y][x] = EMPTY_PIPE
+			}
+		}
+	}
 }
 
 func NewMap(in []string) Map {
@@ -347,51 +427,66 @@ func part1(data []string) int {
 	return int(float64(len(path))/2) + 1
 }
 
+func path2Map(path []P) map[P]struct{} {
+	m := make(map[P]struct{})
+	for _, p := range path {
+		m[p] = struct{}{}
+	}
+	return m
+}
+
 func part2(data []string) int {
 	m := NewMap(data)
 
 	m.Expand()
-	m.PrintMap(P{-1, -1})
-	_, ok := Search(m.start, P{-1, -1}, m)
+	path, ok := Search(m.start, P{-1, -1}, m)
 	if !ok {
 		fmt.Println("no path found")
 		return -1
 	}
 
+	pathMap := path2Map(path)
+	m.Clean(pathMap)
 	for y := 0; y < m.h; y++ {
-		m.Fill(P{0, y})
-		m.Fill(P{m.w - 1, y})
+		m.Fill(P{0, y}, pathMap)
+		m.Fill(P{m.w - 1, y}, pathMap)
 	}
 
 	for x := 0; x < m.w; x++ {
-		m.Fill(P{x, 0})
-		m.Fill(P{x, m.h - 1})
+		m.Fill(P{x, 0}, pathMap)
+		m.Fill(P{x, m.h - 1}, pathMap)
 	}
 
-	for y := 0; y < len(m.fields); y++ {
-		for x := 0; x < len(m.fields[0]); x++ {
+	m.PrintMap(P{-1, -1})
+	/*
 
-			f := m.fields[y][x]
-			if f == FILLED {
-				fmt.Print("O")
-			} else if f == EMPTY_PIPE {
-				fmt.Print("I")
-			} else {
-				fmt.Print(".")
+		for y := 0; y < len(m.fields); y++ {
+			for x := 0; x < len(m.fields[0]); x++ {
+
+				f := m.fields[y][x]
+				if f == FILLED {
+					fmt.Print("O")
+				} else if f == EMPTY_PIPE {
+					fmt.Print("I")
+				} else {
+					fmt.Print(".")
+				}
 			}
+			fmt.Println("")
 		}
-		fmt.Println("")
-	}
+	*/
 
 	// Count filled
 	sum := 0
-	for y := 0; y < len(m.fields); y += 3 {
-		for x := 0; x < len(m.fields[0]); x += 3 {
-			if m.fields[y+1][x+1] == EMPTY_PIPE {
+	for y := 1; y < len(m.fields); y += 3 {
+		for x := 1; x < len(m.fields[0]); x += 3 {
+			if m.fields[y][x] == EMPTY_PIPE {
+				m.fields[y][x] = INSIDE
 				sum++
 			}
 		}
 	}
+	m.PrintMap(P{-1, -1})
 	return sum
 }
 
