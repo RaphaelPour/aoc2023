@@ -321,14 +321,6 @@ func Tile(fields [][]Pipe, x, y int) [][]Pipe {
 			}
 		}
 		return pipes
-		/*
-			NORTH_NORTH_PIPE // |
-			NORTH_EAST_PIPE  // L
-			EAST_WEST_PIPE   //  -
-			NORTH_WEST_PIPE  //   J
-			SOUTH_WEST_PIPE  //   7
-			SOUTH_EAST_PIPE  //   F
-		*/
 	default:
 		return [][]Pipe{
 			{EMPTY_PIPE, EMPTY_PIPE, EMPTY_PIPE},
@@ -458,23 +450,6 @@ func part2(data []string) int {
 	}
 
 	m.PrintMap(P{-1, -1})
-	/*
-
-		for y := 0; y < len(m.fields); y++ {
-			for x := 0; x < len(m.fields[0]); x++ {
-
-				f := m.fields[y][x]
-				if f == FILLED {
-					fmt.Print("O")
-				} else if f == EMPTY_PIPE {
-					fmt.Print("I")
-				} else {
-					fmt.Print(".")
-				}
-			}
-			fmt.Println("")
-		}
-	*/
 
 	// Count filled
 	sum := 0
