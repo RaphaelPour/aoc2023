@@ -1,14 +1,8 @@
-github.com/MarkusFreitag/advent-of-code v0.0.0-20231213072847-0d66da744e59 h1:Nah4G60F+udXI8GdBFQl/ZA2FbPpjB7IUfZPqiekKLQ=
-github.com/MarkusFreitag/advent-of-code v0.0.0-20231213072847-0d66da744e59/go.mod h1:FweftMIYOB0IzZxxdc1kS6DD2CXr0fjBAn0tNB9h4gU=
-github.com/RaphaelPour/stellar v0.0.0-20221215052053-c272527ed746 h1:qGsQanB9IMHHX7mULVwnaNmwPAb3mjXRakPZ8w818+E=
-github.com/RaphaelPour/stellar v0.0.0-20221215052053-c272527ed746/go.mod h1:Hoe3brR7XzDB+0qQqfgwMqhdomrrg94z8a4lno8WVtM=
-github.com/TheAlgorithms/Go v0.0.3-alpha h1:lnph8xGHqRhYD5V2Ujkv7eJDTY+ydcwKZwYAHjDey2M=
-github.com/TheAlgorithms/Go v0.0.3-alpha/go.mod h1:yRPD24VV9SWwvNcDbe1+is5fIdebfgA9uNFWdAooIYU=
+github.com/RaphaelPour/stellar v0.0.0-20231217130120-5e5c684a9382 h1:xGs7fUdZJJ0pBJZV4ljQZNEgEzK392Y1YXQW2NBKJrU=
+github.com/RaphaelPour/stellar v0.0.0-20231217130120-5e5c684a9382/go.mod h1:Hoe3brR7XzDB+0qQqfgwMqhdomrrg94z8a4lno8WVtM=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/dougwatson/Go/v3 v3.0.1 h1:MorsOb/a/1SyMw95WQQKqg1n/5C+Qoc/DxVJ7WM60Z0=
-github.com/dougwatson/Go/v3 v3.0.1/go.mod h1:Hb5L/fvP9L56Rwe5kipV7ceVihsRWCSwV2MhWX10lk4=
 github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
 github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
