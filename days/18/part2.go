@@ -70,6 +70,7 @@ func NewAction(in string) (Action, error) {
 type DigPlan struct {
 	actions  []Action
 	visited  map[smath.Point]struct{}
+	outer    map[smath.Point]struct{}
 	interior int
 	min, max smath.Point
 }
@@ -129,8 +130,11 @@ func (d *DigPlan) Fill(pos smath.Point) {
 	if _, ok := d.visited[pos]; ok {
 		return
 	}
+	if _, ok := d.outer[pos]; ok {
+		return
+	}
 
-	d.visited[pos] = struct{}{}
+	d.outer[pos] = struct{}{}
 	d.Fill(pos.Add(smath.Point{1, 0}))
 	d.Fill(pos.Add(smath.Point{-1, 0}))
 	d.Fill(pos.Add(smath.Point{0, 1}))
@@ -160,6 +164,7 @@ func NewDigPlan(in []string) (DigPlan, error) {
 	p := DigPlan{}
 	p.actions = make([]Action, len(in))
 	p.visited = make(map[smath.Point]struct{})
+	p.outer = make(map[smath.Point]struct{})
 	p.min = smath.Point{100, 100}
 
 	for i := range in {
@@ -182,12 +187,21 @@ func part1(data []string) int {
 	fmt.Println("NEW")
 	plan.Dig()
 	fmt.Println("DIG")
-	// plan.Fill(smath.Point{1, 1})
+
+	for y := plan.min.Y; y <= plan.max.Y; y++ {
+		plan.Fill(smath.Point{plan.min.X, y})
+		plan.Fill(smath.Point{plan.max.X, y})
+	}
+	fmt.Println("FILL Y")
+	for x := plan.min.X; x <= plan.max.X; x++ {
+		plan.Fill(smath.Point{x, plan.min.Y})
+		plan.Fill(smath.Point{x, plan.max.Y})
+	}
+
 	fmt.Println("FILL")
 	//plan.Print()
 	fmt.Println("PRINT")
-	//return len(plan.visited)
-	return plan.Count()
+	return len(plan.visited)
 }
 
 func part2(data []string) int {
