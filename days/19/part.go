@@ -8,6 +8,15 @@ import (
 	sstrings "github.com/RaphaelPour/stellar/strings"
 )
 
+var (
+	xmasMap = map[string]int{
+		"x": 0,
+		"m": 1,
+		"a": 2,
+		"s": 3,
+	}
+)
+
 type Rule struct {
 	isTerminal   bool
 	hasOperation bool
@@ -143,22 +152,117 @@ func (r *RuleSet) Eval(rating Rating) ([]string, bool) {
 	return path, false
 }
 
+type Interval struct {
+	min, max int
+}
+
+func (i Interval) MinMax(other Interval) Interval {
+	if i.min > other.min {
+		i.min = other.min
+	}
+
+	if i.max < other.max {
+		i.max = other.max
+	}
+
+	return i
+}
+
+func (i Interval) Span() int {
+	return i.max - i.min
+}
+
+type Combination [4]Interval
+
+func (c Combination) MinMax(other Combination) Combination {
+	for i := range c {
+		c[i] = c[i].MinMax(other[i])
+	}
+	return c
+}
+
+func (c Combination) Count() int {
+	count := 0
+	for i := range c {
+		if span := c[i].Span(); span > count {
+			count = span
+		}
+	}
+	return count
+}
+
+func (c Combination) Apply(rule Rule) (Combination, bool) {
+	newComb := FromRule(rule)
+
+	for i := range newComb {
+		if newComb[i].min < c.max || newComb[i].max > c.min {
+			return Combination{}, false
+		}
+	}
+
+	return c.MinMax(newComb)
+}
+
+func FromRule(r Rule) Combination {
+	i := xmasMap[rule.operand1]
+	comb := NewCombination()
+	if rule.lower {
+		comb[i].max = r.operand2 - 1
+	} else {
+		comb[i].min = r.operand2 + 1
+	}
+	return comb
+}
+
+func NewCombination() Combination {
+	c := make(Combination, 4)
+	for i := range c {
+		c[i] = Interval{1, 4000}
+	}
+	return c
+}
+
+func (r *RuleSet) Resolve(ruleKey string, comb Combination) int {
+	product := 0
+	for _, rule := range r.rules[ruleKey] {
+		if !rule.hasOperation {
+			if rule.isTerminal {
+				if rule.production == "A" {
+					product += comb.Count()
+				}
+			} else {
+				product += append(product, r.Resolve(rule.production, comb))
+			}
+			continue
+		}
+
+		// has operation, no terminal
+		newComb, ok := comb.Apply(rule)
+		if ok {
+			product += append(product, r.Resolve(r.production, newComb)...)
+		}
+	}
+	return product
+}
+
 func part1(data []string) int {
 	r := NewRuleset(data)
 	return r.EvalAll()
 }
 
 func part2(data []string) int {
+	r := NewRuleset(data)
+	r.Resolve("in")
 	return 0
 }
 
 func main() {
-	data := input.LoadString("input")
+	data := input.LoadString("input1")
 
 	fmt.Println("== [ PART 1 ] ==")
 	fmt.Println(part1(data))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println(part2(data))
 
 }
