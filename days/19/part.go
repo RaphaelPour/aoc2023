@@ -235,13 +235,30 @@ func (c Combination) Apply(rule Rule) (Combination, bool) {
 	return c.MinMax(newComb), true
 }
 
+func (c Combination) Merge(other Combination) (Combination, bool) {
+	for i := range other {
+		if other[i].min > c[i].max {
+			fmt.Printf("NOPE: new %s < original %s\n", other[i], c[i])
+			return Combination{}, false
+		}
+
+		if other[i].max < c[i].min {
+			fmt.Printf("NOPE: new %s > original %s\n", other[i], c[i])
+			return Combination{}, false
+		}
+
+	}
+
+	return c.MinMax(other), true
+}
+
 func FromRule(rule Rule) Combination {
 	i := xmasMap[rule.operand1]
 	comb := NewCombination()
 	if rule.larger {
-		comb[i].min = rule.operand2 + 1
+		comb[i].min = rule.operand2 - 1
 	} else {
-		comb[i].max = rule.operand2 - 1
+		comb[i].max = rule.operand2 + 1
 	}
 	return comb
 }
@@ -254,8 +271,8 @@ func NewCombination() Combination {
 	return c
 }
 
-func (r *RuleSet) Resolve(ruleKey string, comb Combination, depth int) int {
-	product := 0
+func (r *RuleSet) Resolve(ruleKey string, comb Combination, depth int) []Combination {
+	product := make([]Combination, 0)
 	fmt.Printf("%s=== %s ===\n", strings.Repeat(sep, depth), ruleKey)
 	for _, rule := range r.rules[ruleKey] {
 		if rule.hasOperation {
@@ -264,11 +281,10 @@ func (r *RuleSet) Resolve(ruleKey string, comb Combination, depth int) int {
 				goodColor.Println(strings.Repeat(sep, depth), rule)
 				if rule.isTerminal {
 					if rule.production == "A" {
-						goalColor.Printf("%s%d\n", strings.Repeat(sep, depth), newComb.Count())
-						product += newComb.Count()
+						product = append(product, newComb)
 					}
 				} else {
-					product += r.Resolve(rule.production, newComb, depth+1)
+					product = append(product, r.Resolve(rule.production, newComb, depth+1)...)
 				}
 			} else {
 				badColor.Println(strings.Repeat(sep, depth), rule)
@@ -277,10 +293,10 @@ func (r *RuleSet) Resolve(ruleKey string, comb Combination, depth int) int {
 			goodColor.Println(strings.Repeat(sep, depth), rule)
 			if rule.isTerminal {
 				if rule.production == "A" {
-					product += comb.Count()
+					product = append(product, comb)
 				}
 			} else {
-				product += r.Resolve(rule.production, comb, depth+1)
+				product = append(product, r.Resolve(rule.production, comb, depth+1)...)
 			}
 		}
 	}
@@ -295,7 +311,30 @@ func part1(data []string) int {
 
 func part2(data []string) int {
 	r := NewRuleset(data)
-	return r.Resolve("in", NewCombination(), 0)
+
+	c := r.Resolve("in", NewCombination(), 0)
+	fmt.Println(len(c))
+
+	applied := true
+	for applied {
+		applied = false
+		for i := 1; i < len(c)-1; i++ {
+			newC, ok := c[i].Merge(c[i+1])
+			if ok {
+				c[i] = newC
+				c = append(c[:i+1], c[i+2:]...)
+				applied = true
+				break
+			}
+		}
+	}
+
+	sum := 0
+	for _, comb := range c {
+		sum += comb.Count()
+	}
+
+	return sum
 }
 
 func main() {
