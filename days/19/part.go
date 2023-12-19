@@ -6,6 +6,7 @@ import (
 
 	"github.com/RaphaelPour/stellar/input"
 	sstrings "github.com/RaphaelPour/stellar/strings"
+	"github.com/fatih/color"
 )
 
 var (
@@ -15,6 +16,11 @@ var (
 		"a": 2,
 		"s": 3,
 	}
+
+	goodColor = color.New(color.FgGreen)
+	badColor  = color.New(color.FgRed)
+	goalColor = color.New(color.FgBlue)
+	sep       = "|  "
 )
 
 type Rule struct {
@@ -26,6 +32,16 @@ type Rule struct {
 	production   string
 }
 
+func (r Rule) String() string {
+	if !r.hasOperation {
+		return fmt.Sprintf("else -> %s", r.production)
+	}
+	if r.larger {
+		return fmt.Sprintf("%sϵ(%d,4000] -> %s", r.operand1, r.operand2, r.production)
+	}
+	return fmt.Sprintf("%sϵ[1,%d) -> %s", r.operand1, r.operand2, r.production)
+}
+
 func NewRules(in string) []Rule {
 	rules := make([]Rule, 0)
 	for _, cond := range strings.Split(in, ",") {
@@ -35,11 +51,9 @@ func NewRules(in string) []Rule {
 		if len(parts) == 1 {
 			r.production = cond
 		} else {
-			fmt.Print(string(parts[0][1]))
 			r.hasOperation = true
 			r.operand1 = string(parts[0][0])
 			r.larger = (parts[0][1] == '>')
-			fmt.Println(r.larger)
 			r.operand2 = sstrings.ToInt(parts[0][2:])
 			r.production = parts[1]
 		}
@@ -58,12 +72,14 @@ func (r Rule) Check(val int) bool {
 		return false
 	}
 
-	op := "<"
-	if r.larger {
-		op = ">"
-	}
+	/*
+		op := "<"
+		if r.larger {
+			op = ">"
+		}
+	*/
 
-	fmt.Printf("%d %s %d = %t\n", val, op, r.operand2, (r.larger == (val > r.operand2)))
+	//fmt.Printf("%d %s %d = %t\n", val, op, r.operand2, (r.larger == (val > r.operand2)))
 	return r.larger == (val > r.operand2)
 }
 
@@ -120,12 +136,8 @@ func NewRuleset(in []string) RuleSet {
 func (r *RuleSet) EvalAll() int {
 	sum := 0
 	for _, rating := range r.ratings {
-		path, ok := r.Eval(rating)
-		if ok {
-			fmt.Println("A ", rating, path)
+		if _, ok := r.Eval(rating); ok {
 			sum += rating.Sum()
-		} else {
-			fmt.Println("R ", rating, path)
 		}
 	}
 	return sum
@@ -156,12 +168,16 @@ type Interval struct {
 	min, max int
 }
 
+func (i Interval) String() string {
+	return fmt.Sprintf("[%d,%d]", i.min, i.max)
+}
+
 func (i Interval) MinMax(other Interval) Interval {
-	if i.min > other.min {
+	if other.min > i.min {
 		i.min = other.min
 	}
 
-	if i.max < other.max {
+	if other.max < i.max {
 		i.max = other.max
 	}
 
@@ -169,24 +185,33 @@ func (i Interval) MinMax(other Interval) Interval {
 }
 
 func (i Interval) Span() int {
+	if i.max < i.min {
+		return 0
+	}
 	return i.max - i.min
 }
 
 type Combination [4]Interval
 
+func (c Combination) String() string {
+	return fmt.Sprintf(
+		"x%s m%s a%s s%s",
+		c[0], c[1], c[2], c[3],
+	)
+}
+
 func (c Combination) MinMax(other Combination) Combination {
+	newC := Combination{}
 	for i := range c {
-		c[i] = c[i].MinMax(other[i])
+		newC[i] = c[i].MinMax(other[i])
 	}
-	return c
+	return newC
 }
 
 func (c Combination) Count() int {
-	count := 0
+	count := 1
 	for i := range c {
-		if span := c[i].Span(); span > count {
-			count = span
-		}
+		count *= c[i].Span()
 	}
 	return count
 }
@@ -195,53 +220,71 @@ func (c Combination) Apply(rule Rule) (Combination, bool) {
 	newComb := FromRule(rule)
 
 	for i := range newComb {
-		if newComb[i].min < c.max || newComb[i].max > c.min {
+		if newComb[i].min > c[i].max {
+			fmt.Printf("NOPE: new %s < original %s\n", newComb[i], c[i])
 			return Combination{}, false
 		}
+
+		if newComb[i].max < c[i].min {
+			fmt.Printf("NOPE: new %s > original %s\n", newComb[i], c[i])
+			return Combination{}, false
+		}
+
 	}
 
-	return c.MinMax(newComb)
+	return c.MinMax(newComb), true
 }
 
-func FromRule(r Rule) Combination {
+func FromRule(rule Rule) Combination {
 	i := xmasMap[rule.operand1]
 	comb := NewCombination()
-	if rule.lower {
-		comb[i].max = r.operand2 - 1
+	if rule.larger {
+		comb[i].min = rule.operand2 + 1
 	} else {
-		comb[i].min = r.operand2 + 1
+		comb[i].max = rule.operand2 - 1
 	}
 	return comb
 }
 
 func NewCombination() Combination {
-	c := make(Combination, 4)
+	c := Combination{}
 	for i := range c {
 		c[i] = Interval{1, 4000}
 	}
 	return c
 }
 
-func (r *RuleSet) Resolve(ruleKey string, comb Combination) int {
+func (r *RuleSet) Resolve(ruleKey string, comb Combination, depth int) int {
 	product := 0
+	fmt.Printf("%s=== %s ===\n", strings.Repeat(sep, depth), ruleKey)
 	for _, rule := range r.rules[ruleKey] {
-		if !rule.hasOperation {
+		if rule.hasOperation {
+			// has operation, no terminal
+			if newComb, ok := comb.Apply(rule); ok {
+				goodColor.Println(strings.Repeat(sep, depth), rule)
+				if rule.isTerminal {
+					if rule.production == "A" {
+						goalColor.Printf("%s%d\n", strings.Repeat(sep, depth), newComb.Count())
+						product += newComb.Count()
+					}
+				} else {
+					product += r.Resolve(rule.production, newComb, depth+1)
+				}
+			} else {
+				badColor.Println(strings.Repeat(sep, depth), rule)
+			}
+		} else {
+			goodColor.Println(strings.Repeat(sep, depth), rule)
 			if rule.isTerminal {
 				if rule.production == "A" {
 					product += comb.Count()
 				}
 			} else {
-				product += append(product, r.Resolve(rule.production, comb))
+				product += r.Resolve(rule.production, comb, depth+1)
 			}
-			continue
-		}
-
-		// has operation, no terminal
-		newComb, ok := comb.Apply(rule)
-		if ok {
-			product += append(product, r.Resolve(r.production, newComb)...)
 		}
 	}
+	fmt.Printf("%s=== %s ===\n", strings.Repeat(sep, depth), ruleKey)
 	return product
 }
 
@@ -252,8 +295,7 @@ func part1(data []string) int {
 
 func part2(data []string) int {
 	r := NewRuleset(data)
-	r.Resolve("in")
-	return 0
+	return r.Resolve("in", NewCombination(), 0)
 }
 
 func main() {
@@ -264,5 +306,6 @@ func main() {
 
 	fmt.Println("== [ PART 2 ] ==")
 	fmt.Println(part2(data))
+	fmt.Println("167409079868000 (input1)")
 
 }
