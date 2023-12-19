@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/MarkusFreitag/advent-of-code v0.0.0-20231217200703-54b0c9d880a2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
