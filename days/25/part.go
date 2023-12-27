@@ -38,7 +38,7 @@ cfc 15929
 */
 
 type Pair struct {
-	Key   string
+	Key   Edge
 	Value int
 }
 
@@ -51,14 +51,15 @@ func (p Pairs) Less(i, j int) bool { return p[i].Value < p[j].Value }
 func (p Pairs) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type Graph struct {
-	edges map[string][]string
-	hist  map[string]int
+	edges      map[string][]string
+	hist       map[Edge]int
+	sortedHist Pairs
 }
 
 func NewGraph(data []string) Graph {
 	g := Graph{
 		edges: make(map[string][]string),
-		hist:  make(map[string]int),
+		hist:  make(map[Edge]int),
 	}
 
 	for _, line := range data {
@@ -93,7 +94,6 @@ func (g Graph) Find(node, goal string, visited map[string]struct{}, maxDepth, de
 
 	if node == goal {
 		visited[node] = struct{}{}
-		g.hist[node] = g.hist[node] + 1
 		return true
 	}
 
@@ -104,7 +104,7 @@ func (g Graph) Find(node, goal string, visited map[string]struct{}, maxDepth, de
 	visited[node] = struct{}{}
 	for _, n := range g.edges[node] {
 		if g.Find(n, goal, visited, maxDepth, depth+1) {
-			g.hist[n] = g.hist[n] + 1
+			g.hist[Edge{node, goal}.Key()] = g.hist[Edge{node, goal}.Key()] + 1
 			return true
 		}
 	}
@@ -115,38 +115,27 @@ type Edge struct {
 	from, to string
 }
 
-func (g Graph) FindDividerEdges(candidates []string) []Edge {
-	e := make([]Edge, 0)
-	for i, c := range candidates {
-		e = append(e, Edge{
-			from: c,
-			to: g.FindNearest(
-				c,
-				append(append([]string{}, candidates[:i], candidates[i+1:])),
-			),
-		},
-		)
+func (e Edge) Key() Edge {
+	if e.from < e.to {
+		e.from, e.to = e.to, e.from
 	}
 	return e
 }
 
-func (g Graph) FindNearest(node, candidates []string) string {
-	steps := 1000
-	best := ""
-
-	for _, c := range candidates {
-		depth := 1
-		for {
-			if g.Find(node, c, map[string]struct{}{}, depth, 0) {
-				break
-			}
-			depth++
-		}
-	}
-	return best
+func (e Edge) String() string {
+	return fmt.Sprintf("%s-%s", e.from, e.to)
 }
 
-func (g Graph) CreateHist() {
+func (g Graph) FindNearest(node string, candidates []string) string {
+	for _, c := range candidates {
+		if g.Find(node, c, map[string]struct{}{}, 2, 0) {
+			return c
+		}
+	}
+	return ":("
+}
+
+func (g Graph) CreateHist() []Edge {
 	keys := make([]string, len(g.edges))
 	i := 0
 	for key := range g.edges {
@@ -154,7 +143,7 @@ func (g Graph) CreateHist() {
 		i++
 	}
 
-	rounds := 50000
+	rounds := 100000
 	for i := 0; i < rounds; i++ {
 		if i%100 == 0 {
 			fmt.Printf("\r%d %.2f", i, 100.0/float64(rounds)*float64(i))
@@ -168,6 +157,23 @@ func (g Graph) CreateHist() {
 		}
 	}
 	fmt.Println("")
+
+	pairs := make(Pairs, len(g.hist))
+	i = 0
+	for node, count := range g.hist {
+		pairs[i] = Pair{Key: node, Value: count}
+		i++
+	}
+
+	sort.Sort(sort.Reverse(pairs))
+	g.sortedHist = pairs
+
+	// return top 6 nodes that define the divifing 3 edges
+	result := make([]Edge, 3)
+	for i := 0; i < len(result); i++ {
+		result[i] = pairs[i].Key
+	}
+	return result
 }
 
 func (g Graph) PrintEdges() {
@@ -177,26 +183,17 @@ func (g Graph) PrintEdges() {
 }
 
 func (g Graph) PrintHist() {
-	pairs := make(Pairs, len(g.hist))
-
-	i := 0
-	for node, count := range g.hist {
-		pairs[i] = Pair{Key: node, Value: count}
-		i++
-	}
-
-	sort.Sort(sort.Reverse(pairs))
-
-	for i := 0; i < len(pairs) && i < 20; i++ {
-		fmt.Printf("%s %d\n", pairs[i].Key, pairs[i].Value)
+	for i := 0; i < len(g.sortedHist) && i < 20; i++ {
+		fmt.Printf("%s %d\n", g.sortedHist[i].Key, g.sortedHist[i].Value)
 	}
 }
 
 func part1(data []string) int {
 	g := NewGraph(data)
-	g.CreateHist()
+	top3 := g.CreateHist()
 	g.PrintHist()
-	fmt.Println(g.FindDividerEdges())
+	fmt.Println(top3)
+
 	return 0
 }
 
