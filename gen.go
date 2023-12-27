@@ -39,7 +39,6 @@ func main() {
 		))
 	if err != nil {
 		color.Red("error getting input: %s", err)
-		return
 	}
 
 	/* create day folder */
@@ -113,10 +112,12 @@ func main() {
 	}
 
 	/* store input */
-	err = ioutil.WriteFile(filepath.Join(path, "input"), []byte(input), 0777)
-	if err != nil {
-		color.Red("error writing input to file: %s", err)
-		return
+	if input != "" {
+		err = ioutil.WriteFile(filepath.Join(path, "input"), []byte(input), 0777)
+		if err != nil {
+			color.Red("error writing input to file: %s", err)
+			return
+		}
 	}
 
 	color.Green("day %d is ready to solve :)", day)
