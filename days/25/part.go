@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/RaphaelPour/stellar/input"
+	"github.com/fatih/color"
 )
 
 /* Histogram
@@ -111,6 +112,28 @@ func (g Graph) Find(node, goal string, visited map[string]struct{}, maxDepth, de
 	return false
 }
 
+func (g Graph) Count(node string, visited map[string]struct{}, blockList []Edge) int {
+	if _, ok := visited[node]; ok {
+		return 0
+	}
+
+	visited[node] = struct{}{}
+	for _, n := range g.edges[node] {
+		isBlocked := false
+		for _, blocked := range blockList {
+			if blocked.Equal(Edge{node, n}) {
+				isBlocked = true
+			}
+		}
+
+		if isBlocked {
+			continue
+		}
+		g.Count(n, visited, blockList)
+	}
+	return len(visited)
+}
+
 type Edge struct {
 	from, to string
 }
@@ -120,6 +143,11 @@ func (e Edge) Key() Edge {
 		e.from, e.to = e.to, e.from
 	}
 	return e
+}
+
+func (e Edge) Equal(other Edge) bool {
+	return (e.from == other.from && e.to == other.to) ||
+		(e.from == other.to && e.to == other.from)
 }
 
 func (e Edge) String() string {
@@ -194,7 +222,12 @@ func part1(data []string) int {
 	g.PrintHist()
 	fmt.Println(top3)
 
-	return 0
+	count1 := g.Count(top3[0].from, map[string]struct{}{}, top3)
+	count2 := g.Count(top3[0].to, map[string]struct{}{}, top3)
+
+	fmt.Println(count1, count2)
+
+	return count1 * count2
 }
 
 func main() {
@@ -202,6 +235,13 @@ func main() {
 	data := input.LoadString("input")
 
 	fmt.Println("== [ PART 1 ] ==")
-	fmt.Println(part1(data))
+	solution := part1(data)
+
+	if solution == 547410 {
+		color.New(color.FgHiGreen).Println(solution)
+	} else {
+		color.New(color.FgHiRed).Println(solution)
+	}
+
 	fmt.Println(time.Since(start))
 }
