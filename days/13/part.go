@@ -7,11 +7,6 @@ import (
 	"github.com/RaphaelPour/stellar/input"
 )
 
-const (
-	ASH  = false
-	ROCK = true
-)
-
 type Row []bool
 
 type Pattern struct {
@@ -152,10 +147,6 @@ func (p Pattern) IsXMirrorAxis(x int, smudged bool) bool {
 		return diff == 1
 	}
 	return diff == 0
-}
-
-func (p *Pattern) Smudge(x, y int) {
-	p.fields[y][x] = !p.fields[y][x]
 }
 
 func NewPatterns(in []string) []Pattern {
