@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/RaphaelPour/stellar/input"
 )
@@ -92,13 +93,13 @@ func (p *Pattern) AddRow(in string) {
 
 func (p Pattern) FindMirrorAxis() (int, int) {
 	for y := 0; y < len(p.fields)-1; y++ {
-		fmt.Println("y candiate:", y)
+		// fmt.Println("y candiate:", y)
 		if p.IsYMirrorAxis(y) {
 			return -1, y
 		}
 	}
 	for x := 0; x < len(p.fields[0])-1; x++ {
-		fmt.Println("x candiate:", x)
+		// fmt.Println("x candiate:", x)
 		if p.IsXMirrorAxis(x) {
 			return x, -1
 		}
@@ -147,6 +148,10 @@ func (p Pattern) IsXMirrorAxis(x int) bool {
 	return true
 }
 
+func (p *Pattern) Smudge(x, y int) {
+	p.fields[y][x] = !p.fields[y][x]
+}
+
 func NewPatterns(in []string) []Pattern {
 	patterns := make([]Pattern, 0)
 
@@ -176,25 +181,60 @@ func part1(data []string) int {
 	sum := 0
 	for _, pattern := range patterns {
 		x, y := pattern.FindMirrorAxis()
-		pattern.Print(x, y)
-		fmt.Printf("%d + %d * 100 = %d\n", x+1, y+1, x+1+(y+1)*100)
+		// pattern.Print(x, y)
+		// fmt.Printf("%d + %d * 100 = %d\n", x+1, y+1, x+1+(y+1)*100)
 		sum += x + 1 + (y+1)*100
 	}
 	return sum
 }
 
 func part2(data []string) int {
-	return 0
+	patterns := NewPatterns(data)
+	sum := 0
+	for _, pattern := range patterns {
+		x, y := pattern.FindMirrorAxis()
+
+		found := false
+		for yOff := 0; yOff < len(pattern.fields) && !found; yOff++ {
+			if y > -1 && (yOff == y || yOff == y+1) {
+				continue
+			}
+			for xOff := 0; xOff < len(pattern.fields[0]) && !found; xOff++ {
+				if x > -1 && (xOff == x || xOff == x+1) {
+					continue
+				}
+				pattern.Smudge(xOff, yOff)
+				xGoal, yGoal := pattern.FindMirrorAxis()
+				pattern.Print(xGoal, yGoal)
+				pattern.Smudge(xOff, yOff)
+				if xGoal != -1 || yGoal != -1 {
+					x = xGoal
+					y = yGoal
+					fmt.Println("found", x, y)
+					found = true
+				}
+			}
+		}
+
+		fmt.Printf("%d %d => %d + %d*100 = %d\n", x, y, x+1, y+1, (x + 1 + (y+1)*100))
+		// pattern.Print(x, y)
+		// fmt.Printf("%d + %d * 100 = %d\n", x+1, y+1, x+1+(y+1)*100)
+
+		sum += x + 1 + (y+1)*100
+	}
+	return sum
 }
 
 func main() {
 	data := input.LoadString("input")
 
+	start := time.Now()
 	fmt.Println("== [ PART 1 ] ==")
-	fmt.Println("too low: 20201, 32896")
-	fmt.Println("too high: 106400")
-	fmt.Println(part1(data))
+	fmt.Printf("%d (%s)\n", part1(data), time.Since(start))
 
-	// fmt.Println("== [ PART 2 ] ==")
-	// fmt.Println(part2(data))
+	start = time.Now()
+	fmt.Println("== [ PART 2 ] ==")
+	fmt.Println(" too low: 34095")
+	fmt.Println("too high: 35993")
+	fmt.Printf("%d (%s)\n", part2(data), time.Since(start))
 }
