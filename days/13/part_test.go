@@ -73,7 +73,7 @@ func TestMirror1(t *testing.T) {
 	}
 
 	p := NewPatterns(data)[0]
-	x, y := p.FindMirrorAxis()
+	x, y := p.FindMirrorAxis(false)
 	require.Equal(t, -1, x)
 	require.Equal(t, 3, y)
 
@@ -91,8 +91,7 @@ func TestMirror2(t *testing.T) {
 	}
 
 	p := NewPatterns(data)[0]
-	x, y := p.FindMirrorAxis()
+	x, y := p.FindMirrorAxis(false)
 	require.Equal(t, -1, x)
 	require.Equal(t, 0, y)
-
 }
