@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/RaphaelPour/stellar/input"
@@ -53,27 +54,30 @@ func NewAction(in string) (Action, error) {
 	if len(parts) != 3 {
 		return EmptyAction, fmt.Errorf("error parsing input '%s': %s", in, parts)
 	}
-
-	a.dir = ParseDirection(parts[0])
-	a.length = sstrings.ToInt(parts[1])
-	a.color = strings.Trim(parts[2], "()")
+	raw := strings.Trim(parts[2], "()")[1:]
+	val, err := strconv.ParseInt(raw[:5], 16, 64)
+	if err != nil {
+		return EmptyAction, err
+	}
+	a.length = int(val)
+	a.dir = Direction(sstrings.ToInt(string(raw[5])))
 	return a, nil
 }
 
 type DigPlan struct {
 	actions  []Action
-	visited  map[smath.Point]struct{}
+	visited  Cache
 	interior int
 	min, max smath.Point
 }
 
 func (d *DigPlan) Dig() {
 	pos := smath.Point{0, 0}
-	d.visited[pos] = struct{}{}
+	d.visited.Add(pos)
 	for _, a := range d.actions {
 		for i := 1; i <= a.length; i++ {
 			pos = a.dir.Move(pos)
-			d.visited[pos] = struct{}{}
+			d.visited.Add(pos)
 			d.max = pos.Max(d.max)
 			d.min = pos.Min(d.min)
 			d.interior++
@@ -89,7 +93,7 @@ func (d *DigPlan) Dig() {
 func (d DigPlan) Print() {
 	for y := d.min.Y; y < d.max.Y; y++ {
 		for x := d.min.X; x <= d.max.X; x++ {
-			if _, ok := d.visited[smath.Point{x, y}]; ok {
+			if d.visited.Contains(smath.Point{x, y}) {
 				fmt.Print("#")
 			} else {
 				fmt.Print(".")
@@ -107,7 +111,7 @@ func (d DigPlan) Area() int {
 			for offY := y - 1; !found && offY < y+1; offY++ {
 				for offX := x - 1; !found && offX < x+1; offX++ {
 
-					if _, ok := d.visited[smath.Point{offX, offY}]; ok {
+					if d.visited.Contains(smath.Point{offX, offY}) {
 						found = true
 					}
 				}
@@ -118,12 +122,98 @@ func (d DigPlan) Area() int {
 	return sum
 }
 
+type Range struct {
+	from, to smath.Point
+}
+
+func (r Range) IsSameXAxis(p smath.Point) bool {
+	return (r.from.X == r.to.X && r.to.X == p.X)
+}
+
+func (r Range) IsSameYAxis(p smath.Point) bool {
+	return (r.from.Y == r.to.Y && r.to.Y == p.Y)
+}
+
+func (r Range) IsYAxisNeighbor(p smath.Point) bool {
+	return r.from.Y-1 == p.Y || r.to.Y+1 == p.Y
+}
+
+func (r Range) IsXAxisNeighbor(p smath.Point) bool {
+	return r.from.X-1 == p.X || r.to.X+1 == p.X
+}
+
+func (r Range) AddXNeighbor(p smath.Point) Range {
+	if r.from.X-1 == p.X {
+		r.from.X--
+	} else {
+		r.to.X++
+	}
+
+	return r
+}
+
+func (r Range) AddYNeighbor(p smath.Point) Range {
+	if r.from.Y-1 == p.Y {
+		r.from.Y--
+	} else {
+		r.to.Y++
+	}
+
+	return r
+}
+
+func (r Range) Contains(p smath.Point) bool {
+	return (r.IsSameXAxis(p) && p.Y >= r.from.Y && p.Y <= r.to.Y) ||
+		(r.IsSameYAxis(p) && p.X >= r.from.X && p.X <= r.to.X)
+}
+
+func (r Range) Area() int {
+	return (r.to.X + 1 - r.from.X) * (r.to.Y + 1 - r.from.Y)
+}
+
+type Cache struct {
+	visited map[Range]struct{}
+}
+
+func (c Cache) Add(p smath.Point) {
+	for r := range c.visited {
+		if r.IsSameXAxis(p) && r.IsYAxisNeighbor(p) {
+			delete(c.visited, r)
+			c.visited[r.AddYNeighbor(p)] = struct{}{}
+			return
+		} else if r.IsSameYAxis(p) && r.IsXAxisNeighbor(p) {
+			delete(c.visited, r)
+			c.visited[r.AddXNeighbor(p)] = struct{}{}
+			return
+		}
+	}
+	c.visited[Range{p, p}] = struct{}{}
+}
+
+func (c Cache) Contains(p smath.Point) bool {
+	for r := range c.visited {
+		if r.Contains(p) {
+			return true
+		}
+	}
+	return false
+}
+
+func (c Cache) Area() int {
+	sum := 0
+	for r := range c.visited {
+		sum += r.Area()
+	}
+	return sum
+}
+
 func (d *DigPlan) Fill(pos smath.Point) {
-	if _, ok := d.visited[pos]; ok {
+	if d.visited.Contains(pos) {
 		return
 	}
 
-	d.visited[pos] = struct{}{}
+	d.visited.Add(pos)
+
 	d.Fill(pos.Add(smath.Point{1, 0}))
 	d.Fill(pos.Add(smath.Point{-1, 0}))
 	d.Fill(pos.Add(smath.Point{0, 1}))
@@ -133,7 +223,9 @@ func (d *DigPlan) Fill(pos smath.Point) {
 func NewDigPlan(in []string) (DigPlan, error) {
 	p := DigPlan{}
 	p.actions = make([]Action, len(in))
-	p.visited = make(map[smath.Point]struct{})
+	p.visited = Cache{
+		visited: make(map[Range]struct{}),
+	}
 	p.min = smath.Point{100, 100}
 
 	for i := range in {
@@ -155,7 +247,7 @@ func part1(data []string) int {
 	plan.Dig()
 	plan.Fill(smath.Point{1, 1})
 	plan.Print()
-	return len(plan.visited)
+	return plan.visited.Area()
 }
 
 func part2(data []string) int {

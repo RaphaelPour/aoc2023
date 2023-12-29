@@ -13,6 +13,15 @@ import (
 
 type Direction int
 
+func (d Direction) String() string {
+	return map[Direction]string{
+		RIGHT: "R",
+		LEFT:  "L",
+		UP:    "U",
+		DOWN:  "D",
+	}[d]
+}
+
 func ParseDirection(in string) Direction {
 	return map[string]Direction{
 		"R": RIGHT,
@@ -61,8 +70,7 @@ func NewAction(in string) (Action, error) {
 	}
 	a.length = int(val)
 	a.dir = Direction(sstrings.ToInt(string(raw[5])))
-
-	// fmt.Printf("%s => %d %d\n", raw, a.dir, a.length)
+	fmt.Println(a.dir, a.length)
 
 	return a, nil
 }
