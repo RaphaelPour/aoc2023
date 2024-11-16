@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 
-	"github.com/RaphaelPour/stellar/input"
 	"github.com/fatih/color"
+
+	"github.com/RaphaelPour/stellar/input"
+	"github.com/RaphaelPour/stellar/math"
 )
 
 var (
@@ -96,55 +98,11 @@ func ParseField(in rune) Pipe {
 	}[in]
 }
 
-type P struct {
-	x, y int
-}
-
-func (p P) String() string {
-	return fmt.Sprintf("%d/%d", p.x, p.y)
-}
-
-func (p P) Add(other P) P {
-	p.x += other.x
-	p.y += other.y
-	return p
-}
-
-func (p P) Dist(other P) int {
-	return (p.x - other.x) + (p.y - other.y)
-}
-
-func (p P) Equal(other P) bool {
-	return p.x == other.x && p.y == other.y
-}
-
-func (p P) Min(other P) P {
-	if p.x > other.x {
-		p.x = other.x
-	}
-
-	if p.y > other.y {
-		p.y = other.y
-	}
-	return p
-}
-
-func (p P) Max(other P) P {
-	if p.x < other.x {
-		p.x = other.x
-	}
-
-	if p.y < other.y {
-		p.y = other.y
-	}
-	return p
-}
-
 type Map struct {
 	w, h    int
 	fields  [][]Pipe
-	visited map[P]struct{}
-	start   P
+	visited map[math.Point]struct{}
+	start   math.Point
 }
 
 func (m Map) String() string {
@@ -158,7 +116,7 @@ func (m Map) String() string {
 	return out
 }
 
-func (m Map) PrintMap(pos P) {
+func (m Map) PrintMap(pos math.Point) {
 	if !print {
 		return
 	}
@@ -168,9 +126,9 @@ func (m Map) PrintMap(pos P) {
 	fillColor := color.New(color.FgBlue, color.Bold)
 	for y := range m.fields {
 		for x := range m.fields[y] {
-			if pos.x == x && pos.y == y {
+			if pos.X == x && pos.Y == y {
 				posColor.Print("x")
-				/*else if m.start.x == x && m.start.y == y {
+				/*else if m.start.X == x && m.start.Y == y {
 					fmt.Print("S")
 				} */
 			} else if m.fields[y][x] != EMPTY_PIPE {
@@ -185,14 +143,14 @@ func (m Map) PrintMap(pos P) {
 	}
 }
 
-func Search(pos, from P, m Map) ([]P, bool) {
+func Search(pos, from math.Point, m Map) ([]math.Point, bool) {
 	//fmt.Println("pos: ", pos)
 	//m.PrintMap(pos)
 	m.visited[pos] = struct{}{}
 
-	currentField := m.fields[pos.y][pos.x]
-	if currentField == START_PIPE && from.x > -1 {
-		return []P{pos}, true
+	currentField := m.fields[pos.Y][pos.X]
+	if currentField == START_PIPE && from.X > -1 {
+		return []math.Point{pos}, true
 	}
 
 	for y := -1; y <= 1; y += 1 {
@@ -205,8 +163,8 @@ func Search(pos, from P, m Map) ([]P, bool) {
 				continue
 			}
 
-			next := pos.Add(P{x: x, y: y})
-			if next.x < 0 || next.y < 0 || next.x >= m.w || next.y >= m.h {
+			next := pos.Add(math.Point{x, y})
+			if next.X < 0 || next.Y < 0 || next.X >= m.w || next.Y >= m.h {
 				continue
 			}
 
@@ -214,9 +172,9 @@ func Search(pos, from P, m Map) ([]P, bool) {
 				continue
 			}
 
-			nextField := m.fields[next.y][next.x]
+			nextField := m.fields[next.Y][next.X]
 			if nextField == START_PIPE {
-				return []P{pos}, true
+				return []math.Point{pos}, true
 			}
 
 			if _, alreadyVisited := m.visited[next]; alreadyVisited {
@@ -232,24 +190,24 @@ func Search(pos, from P, m Map) ([]P, bool) {
 	return nil, false
 }
 
-func (m Map) Fill(start P, loop map[P]struct{}) {
-	if start.x < 0 || start.x >= m.w || start.y < 0 || start.y >= m.h {
+func (m Map) Fill(start math.Point, loop map[math.Point]struct{}) {
+	if start.X < 0 || start.X >= m.w || start.Y < 0 || start.Y >= m.h {
 		return
 	}
 
-	if m.fields[start.y][start.x] == FILLED {
+	if m.fields[start.Y][start.X] == FILLED {
 		return
 	}
 
-	if _, ok := loop[P{start.x, start.y}]; ok {
+	if _, ok := loop[math.Point{start.X, start.Y}]; ok {
 		return
 	}
 
-	m.fields[start.y][start.x] = FILLED
-	m.Fill(start.Add(P{0, 1}), loop)
-	m.Fill(start.Add(P{0, -1}), loop)
-	m.Fill(start.Add(P{1, 0}), loop)
-	m.Fill(start.Add(P{-1, 0}), loop)
+	m.fields[start.Y][start.X] = FILLED
+	m.Fill(start.Add(math.Point{0, 1}), loop)
+	m.Fill(start.Add(math.Point{0, -1}), loop)
+	m.Fill(start.Add(math.Point{1, 0}), loop)
+	m.Fill(start.Add(math.Point{-1, 0}), loop)
 }
 
 func Tile(fields [][]Pipe, x, y int) [][]Pipe {
@@ -347,16 +305,16 @@ func (m *Map) Expand() {
 		}
 	}
 
-	visited := make(map[P]struct{})
+	visited := make(map[math.Point]struct{})
 	for p := range m.visited {
-		tile := Tile(m.fields, p.y, p.x)
+		tile := Tile(m.fields, p.Y, p.X)
 		for y := 0; y < 3; y++ {
 			for x := 0; x < 3; x++ {
 				if tile[y][x] == EMPTY_PIPE {
 					continue
 				}
 
-				visited[P{p.x + x + 1, p.y + y + 1}] = struct{}{}
+				visited[math.Point{p.X + x + 1, p.Y + y + 1}] = struct{}{}
 			}
 		}
 	}
@@ -366,20 +324,20 @@ func (m *Map) Expand() {
 
 	m.fields = fields
 	// add one, as the start point is in the middle of the tile
-	m.start = P{m.start.x*3 + 1, m.start.y*3 + 1}
+	m.start = math.Point{m.start.X*3 + 1, m.start.Y*3 + 1}
 	fmt.Println(m.start)
 	m.h = len(m.fields)
 	m.w = len(m.fields[0])
 }
 
-func (m *Map) Clean(path map[P]struct{}) {
+func (m *Map) Clean(path map[math.Point]struct{}) {
 	for y := range m.fields {
 		for x := range m.fields[y] {
 			if m.fields[y][x] == EMPTY_PIPE {
 				continue
 			}
 
-			if _, ok := path[P{x, y}]; !ok {
+			if _, ok := path[math.Point{x, y}]; !ok {
 				m.fields[y][x] = EMPTY_PIPE
 			}
 		}
@@ -389,7 +347,7 @@ func (m *Map) Clean(path map[P]struct{}) {
 func NewMap(in []string) Map {
 	m := Map{}
 	m.fields = make([][]Pipe, len(in))
-	m.visited = make(map[P]struct{})
+	m.visited = make(map[math.Point]struct{})
 	m.h = len(in)
 	m.w = len(in[0])
 
@@ -398,7 +356,7 @@ func NewMap(in []string) Map {
 		for x, field := range line {
 			pipe := ParseField(field)
 			if pipe == START_PIPE {
-				m.start = P{x: x, y: y}
+				m.start = math.Point{x, y}
 			}
 
 			m.fields[y][x] = pipe
@@ -410,7 +368,7 @@ func NewMap(in []string) Map {
 
 func part1(data []string) int {
 	m := NewMap(data)
-	path, ok := Search(m.start, P{-1, -1}, m)
+	path, ok := Search(m.start, math.Point{-1, -1}, m)
 	if !ok {
 		fmt.Println("no path found")
 		return -1
@@ -419,8 +377,8 @@ func part1(data []string) int {
 	return int(float64(len(path))/2) + 1
 }
 
-func path2Map(path []P) map[P]struct{} {
-	m := make(map[P]struct{})
+func path2Map(path []math.Point) map[math.Point]struct{} {
+	m := make(map[math.Point]struct{})
 	for _, p := range path {
 		m[p] = struct{}{}
 	}
@@ -431,7 +389,7 @@ func part2(data []string) int {
 	m := NewMap(data)
 
 	m.Expand()
-	path, ok := Search(m.start, P{-1, -1}, m)
+	path, ok := Search(m.start, math.Point{-1, -1}, m)
 	if !ok {
 		fmt.Println("no path found")
 		return -1
@@ -440,16 +398,16 @@ func part2(data []string) int {
 	pathMap := path2Map(path)
 	m.Clean(pathMap)
 	for y := 0; y < m.h; y++ {
-		m.Fill(P{0, y}, pathMap)
-		m.Fill(P{m.w - 1, y}, pathMap)
+		m.Fill(math.Point{0, y}, pathMap)
+		m.Fill(math.Point{m.w - 1, y}, pathMap)
 	}
 
 	for x := 0; x < m.w; x++ {
-		m.Fill(P{x, 0}, pathMap)
-		m.Fill(P{x, m.h - 1}, pathMap)
+		m.Fill(math.Point{x, 0}, pathMap)
+		m.Fill(math.Point{x, m.h - 1}, pathMap)
 	}
 
-	m.PrintMap(P{-1, -1})
+	m.PrintMap(math.Point{-1, -1})
 
 	// Count filled
 	sum := 0
@@ -461,7 +419,7 @@ func part2(data []string) int {
 			}
 		}
 	}
-	m.PrintMap(P{-1, -1})
+	m.PrintMap(math.Point{-1, -1})
 	return sum
 }
 
