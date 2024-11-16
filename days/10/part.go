@@ -5,6 +5,7 @@ import (
 
 	"github.com/fatih/color"
 
+	"github.com/RaphaelPour/stellar/generator"
 	"github.com/RaphaelPour/stellar/input"
 	"github.com/RaphaelPour/stellar/math"
 )
@@ -153,37 +154,27 @@ func Search(pos, from math.Point, m Map) ([]math.Point, bool) {
 		return []math.Point{pos}, true
 	}
 
-	for y := -1; y <= 1; y += 1 {
-		for x := -1; x <= 1; x += 1 {
-			if x == 0 && y == 0 {
-				continue
-			}
+	for dir := range generator.DirectionsSeq(generator.WithOrthogonalOnly()) {
+		next := pos.Add(dir)
+		if next.X < 0 || next.Y < 0 || next.X >= m.w || next.Y >= m.h {
+			continue
+		}
 
-			if x != 0 && y != 0 {
-				continue
-			}
+		if from.Equal(next) {
+			continue
+		}
 
-			next := pos.Add(math.Point{x, y})
-			if next.X < 0 || next.Y < 0 || next.X >= m.w || next.Y >= m.h {
-				continue
-			}
+		nextField := m.fields[next.Y][next.X]
+		if nextField == START_PIPE {
+			return []math.Point{pos}, true
+		}
 
-			if from.Equal(next) {
-				continue
-			}
-
-			nextField := m.fields[next.Y][next.X]
-			if nextField == START_PIPE {
-				return []math.Point{pos}, true
-			}
-
-			if _, alreadyVisited := m.visited[next]; alreadyVisited {
-				continue
-			}
-			if nextField.Neighbor(x, y) {
-				if path, ok := Search(next, pos, m); ok {
-					return append(path, pos), true
-				}
+		if _, alreadyVisited := m.visited[next]; alreadyVisited {
+			continue
+		}
+		if nextField.Neighbor(dir.X, dir.Y) {
+			if path, ok := Search(next, pos, m); ok {
+				return append(path, pos), true
 			}
 		}
 	}
