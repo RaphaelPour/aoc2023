@@ -22,11 +22,11 @@ type Cell struct {
 	num         int
 	kind        CellKind
 	connected   bool
-	coord       Point
-	symbolCoord Point
+	coord       math.Point
+	symbolCoord math.Point
 }
 
-func NewCell(in string, coord Point) Cell {
+func NewCell(in string, coord math.Point) Cell {
 	k := kind(in)
 	var num int
 	if k == CELL_KIND_NUMBER {
@@ -54,22 +54,8 @@ func kind(in string) CellKind {
 	return CELL_KIND_SYMBOL
 }
 
-type Point struct {
-	x, y int
-}
-
-func (p Point) String() string {
-	return fmt.Sprintf("(%d,%d)", p.x, p.y)
-}
-
-func (p Point) Add(other Point) Point {
-	p.x += other.x
-	p.y += other.y
-	return p
-}
-
 type Grid struct {
-	data       map[Point]Cell
+	data       map[math.Point]Cell
 	maxX, maxY int
 }
 
@@ -77,7 +63,7 @@ func (g Grid) String() string {
 	out := ""
 	for y := 0; y <= g.maxY; y++ {
 		for x := 0; x <= g.maxX; x++ {
-			cell, ok := g.data[Point{x, y}]
+			cell, ok := g.data[math.Point{x, y}]
 			if !ok {
 				out += "."
 			} else {
@@ -89,7 +75,7 @@ func (g Grid) String() string {
 	return out
 }
 
-func (g Grid) Get(p Point) Cell {
+func (g Grid) Get(p math.Point) Cell {
 	cell, ok := g.data[p]
 	if !ok {
 		cell = Cell{}
@@ -105,10 +91,10 @@ func (g *Grid) Set(x, y int, cell Cell) {
 	if y > g.maxY {
 		g.maxY = y
 	}
-	g.data[Point{x, y}] = cell
+	g.data[math.Point{x, y}] = cell
 }
 
-func (g Grid) HasConnections(p, origin Point, depth int) (Point, bool) {
+func (g Grid) HasConnections(p, origin math.Point, depth int) (math.Point, bool) {
 	if g.Get(p).kind == CELL_KIND_SYMBOL {
 		return p, true
 	}
@@ -119,7 +105,7 @@ func (g Grid) HasConnections(p, origin Point, depth int) (Point, bool) {
 				continue
 			}
 
-			cell := g.Get(p.Add(Point{x, y}))
+			cell := g.Get(p.Add(math.Point{x, y}))
 
 			if cell.coord == origin {
 				continue
@@ -138,7 +124,7 @@ func (g Grid) HasConnections(p, origin Point, depth int) (Point, bool) {
 		}
 	}
 
-	return Point{}, false
+	return math.Point{}, false
 }
 
 func (g Grid) FindMissing() (int, int) {
@@ -146,24 +132,24 @@ func (g Grid) FindMissing() (int, int) {
 
 	for y := 0; y <= g.maxY; y++ {
 		for x := 0; x <= g.maxX; x++ {
-			cell, ok := g.data[Point{x, y}]
+			cell, ok := g.data[math.Point{x, y}]
 			if !ok || cell.kind != CELL_KIND_NUMBER {
 				continue
 			}
-			if symbolCoord, ok := g.HasConnections(Point{x, y}, Point{x, y}, 0); ok {
+			if symbolCoord, ok := g.HasConnections(math.Point{x, y}, math.Point{x, y}, 0); ok {
 				cell.symbolCoord = symbolCoord
 				cells = append(cells, cell)
 			}
 		}
 	}
 
-	symbolCache := make(map[Point][]int)
+	symbolCache := make(map[math.Point][]int)
 
 	sum := 0
 	buffer := cells[0].buffer
 	for i, cell := range cells[1:] {
-		if cell.coord.y != cells[i].coord.y ||
-			math.Abs(cell.coord.x-cells[i].coord.x) > 1 {
+		if cell.coord.Y != cells[i].coord.Y ||
+			math.Abs(cell.coord.X-cells[i].coord.X) > 1 {
 			num := stellar_strings.ToInt(buffer)
 			sum += num
 			buffer = ""
@@ -200,7 +186,7 @@ func (g Grid) FindMissing() (int, int) {
 }
 
 func part1(data []string) (int, int) {
-	grid := Grid{make(map[Point]Cell), -1, -1}
+	grid := Grid{make(map[math.Point]Cell), -1, -1}
 
 	for y, line := range data {
 		for x, r := range line {
@@ -208,7 +194,7 @@ func part1(data []string) (int, int) {
 			if ch == "." {
 				continue
 			}
-			grid.Set(x, y, NewCell(ch, Point{x, y}))
+			grid.Set(x, y, NewCell(ch, math.Point{x, y}))
 		}
 	}
 
